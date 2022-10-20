@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AstarVisualizer", "AstarVisualizer\AstarVisualizer.csproj", "{1ABF0D9A-0005-4FE9-B4B3-0B1C1033B49F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1ABF0D9A-0005-4FE9-B4B3-0B1C1033B49F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1ABF0D9A-0005-4FE9-B4B3-0B1C1033B49F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1ABF0D9A-0005-4FE9-B4B3-0B1C1033B49F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1ABF0D9A-0005-4FE9-B4B3-0B1C1033B49F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7E826961-9CFA-48A3-98DB-28F71F0571BB}
+	EndGlobalSection
+EndGlobal

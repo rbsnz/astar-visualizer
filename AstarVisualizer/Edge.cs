@@ -15,6 +15,18 @@ public class Edge
 
     public float Distance => _lineShape.Distance;
 
+    public float Weight
+    {
+        get => _lineShape.Weight;
+        set => _lineShape.Weight = value;
+    }
+
+    public Color Color
+    {
+        get => _lineShape.FillColor;
+        set => _lineShape.FillColor = value;
+    }
+
     public Edge(Vertex a, Vertex b)
     {
         A = a;

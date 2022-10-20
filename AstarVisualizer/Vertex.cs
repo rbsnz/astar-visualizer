@@ -68,6 +68,11 @@ public class Vertex
     }
 
     /// <summary>
+    /// Gets if this vertex is connected to another vertex.
+    /// </summary>
+    public bool IsConnectedTo(Vertex other) => _edges.ContainsKey(other);
+
+    /// <summary>
     /// Disconnect this vertex from another vertex.
     /// </summary>
     /// <param name="other">The other vertex to remove the connection from.</param>

@@ -28,14 +28,17 @@ public sealed class Visualizer
     private readonly CircleShape _hoverCircle = new()
     {
         FillColor = new Color(255, 255, 255, 55),
-        Radius = VertexRadius + 10,
-        Origin = new Vector2f(VertexRadius + 10, VertexRadius + 10)
+        Radius = VertexRadius * 2,
+        Origin = new Vector2f(VertexRadius * 2, VertexRadius * 2)
     };
 
     private Vertex? _hoverVertex;
-    private Vertex? _draggingVertex;
-    private Vector2f _dragOffset;
     private bool _canPlace;
+
+    private bool _isDragging;
+    private Vertex? _draggingVertex;
+    private Vector2f _draggingFrom;
+    private Vector2f _dragOffset;
 
     private Edge? _hoverEdge;
     private Vector2f _edgeHoverPoint;
@@ -253,80 +256,117 @@ public sealed class Visualizer
 
         return minVertex;
     }
-    #endregion
 
-    #region Events
-    private void HandleMouseMoved(object? sender, MouseMoveEventArgs e)
+    private void PlaceVertex(Vector2f position)
     {
-        Vector2i mousePos = Mouse.GetPosition(_window);
-        Vector2f mousePosF = new(mousePos.X, mousePos.Y);
+        // Prevent placing vertices in invalid locations.
+        UpdateCanPlaceAt(position);
+        if (!_canPlace) return;
+
+        // Create a new vertex at the position.
+        var newVertex = new Vertex(position, VertexRadius);
+
+        // Connect the nearest linkable vertex to the new vertex, if it exists.
+        Vertex? linkVertex = FindNearestLinkableVertex(position);
+        if (linkVertex is not null &&
+            linkVertex.Connect(newVertex, out Edge? newEdge))
+        {
+            // Add the newly created edge.
+            _edges.Add(newEdge);
+        }
+
+        // Add the new vertex.
+        _vertices.Add(newVertex);
+    }
+
+    /// <summary>
+    /// Begins dragging a vertex from the specified mouse position.
+    /// </summary>
+    private void BeginDrag(Vertex vertex, Vector2f mousePos)
+    {
+        _draggingVertex = vertex;
+        _draggingFrom = vertex.Position;
+        _dragOffset = vertex.Position - mousePos;
+        _canPlace = true;
+        _isDragging = true;
+    }
+
+    /// <summary>
+    /// Updates dragging a vertex to the specified mouse position.
+    /// </summary>
+    private void UpdateDrag(Vector2f mousePos)
+    {
+        if (_draggingVertex is null) return;
+
+        _draggingVertex.Position = mousePos + _dragOffset;
+        _hoverCircle.Position = _draggingVertex.Position;
+    }
+
+    /// <summary>
+    /// Ends dragging a vertex to the specified mouse position.
+    /// </summary>
+    private void EndDrag(Vector2f mousePos)
+    {
+        _isDragging = false;
 
         if (_draggingVertex is not null)
         {
-            _draggingVertex.Position = new Vector2f(e.X, e.Y) + _dragOffset;
-            _hoverCircle.Position = _draggingVertex.Position;
-        }
-        else
-        {
-            _hoverVertex = GetVertexAtPoint(mousePosF);
-            if (_hoverVertex is not null)
-                _hoverCircle.Position = _hoverVertex.Position;
+            // Revert the vertex position back to where it was dragged from if it cannot be placed here.
+            if (!_canPlace)
+                _draggingVertex.Position = _draggingFrom;
+
+            _draggingVertex = null;
         }
 
+        UpdateHover(mousePos);
+    }
+
+    private void UpdateCanPlaceAt(Vector2f pos)
+    {
         _canPlace = true;
+
+        if (_isDragging)
+            pos += _dragOffset;
 
         foreach (var vertex in _vertices)
         {
             if (vertex == _draggingVertex)
                 continue;
 
-            if (Maths.Distance(vertex.Position, mousePos) < VertexRadius * 3)
+            if (Maths.Distance(vertex.Position, pos) < VertexRadius * 3)
             {
                 _canPlace = false;
                 break;
             }
         }
 
-        if (_hoverEdge is not null)
-        {
-            if (_hoverEdge.IsPotentialEdge)
-            {
-                _hoverEdge.IsVisible = false;
-            }
-        }
-        _hoverEdge = null;
-
-        if (!Keyboard.IsKeyPressed(Keyboard.Key.LShift)) return;
-
-        if (SnapPointToNearestEdge(_edges, mousePosF, 10.0f, out Edge? edge, out Vector2f intersection) ||
-            SnapPointToNearestEdge(_potentialEdges, mousePosF, 30.0f, out edge, out intersection))
-        {
-            float distanceMouse = Maths.Distance(mousePosF, intersection);
-            if (distanceMouse <= VertexRadius * 2)
-            {
-                _canPlace = false;
-
-                float distanceA = Maths.Distance(edge.A.Position, intersection);
-                float distanceB = Maths.Distance(edge.B.Position, intersection);
-                if (distanceA > edge.A.Radius * 2 &&
-                    distanceB > edge.B.Radius * 2)
-                {
-                    _hoverEdge = edge;
-                    if (_hoverEdge.IsPotentialEdge)
-                    {
-                        _hoverEdge.IsVisible = true;
-                    }
-                    _edgeHoverPoint = intersection;
-                }
-            }
-        }
+        // TODO: Check edge collisions.
     }
 
+    private void UpdateHover(Vector2f mousePos)
+    {
+        if (_isDragging)
+        {
+            if (_draggingVertex is not null)
+            {
+                _hoverCircle.Position = _draggingVertex.Position;
+            }
+        }
+        else
+        {
+            _hoverVertex = GetVertexAtPoint(mousePos);
+            if (_hoverVertex is not null)
+                _hoverCircle.Position = _hoverVertex.Position;
+        }
+    }
+    #endregion
+
+    #region Events
     private void HandleMouseButtonPressed(object? sender, MouseButtonEventArgs e)
     {
-        Vector2f mousePosF = new(e.X, e.Y);
-        Vertex? hoverVertex = GetVertexAtPoint(mousePosF);
-        if (hoverVertex != null && e.Button == Mouse.Button.Right)
+        Vector2f mousePos = new(e.X, e.Y);
+
+        if (_hoverVertex != null && e.Button == Mouse.Button.Right)
         {
             if (goal is null)
             {
@@ -336,15 +376,15 @@ public sealed class Visualizer
                     {
                         edge.Color = new Color(0, 255, 0);
                     }
-                    start = hoverVertex;
+                    start = _hoverVertex;
                     return;
                 }
-                else if (start == hoverVertex)
+                else if (start == _hoverVertex)
                 {
                     return;
                 }
 
-                goal = hoverVertex;
+                goal = _hoverVertex;
 
                 List<Vertex>? path = AStar(start, goal, Heuristics.Euclidean);
                 if (path is not null)
@@ -362,82 +402,107 @@ public sealed class Visualizer
             }
         }
 
-        if (e.Button != Mouse.Button.Left)
-            return;
+        if (e.Button == Mouse.Button.Left)
+        {
+            if (_hoverEdge is not null)
+            {
+                if (_hoverEdge.IsPotentialEdge)
+                {
+                    if (_hoverEdge.A.Connect(_hoverEdge.B, out Edge? newEdge))
+                    {
+                        newEdge.Color = Theme.Current.EdgeFill;
+                        _edges.Add(newEdge);
+                        _hoverEdge = null;
+                        CalculatePotentialEdges();
+                        return;
+                    }
+                }
+                else
+                {
+                    if (_hoverEdge.A.Disconnect(_hoverEdge.B, out _))
+                    {
+                        _edges.Remove(_hoverEdge);
+                        if (_hoverEdge.A.Connections.Count == 0)
+                            _vertices.Remove(_hoverEdge.A);
+                        if (_hoverEdge.B.Connections.Count == 0)
+                            _vertices.Remove(_hoverEdge.B);
+                        _hoverEdge = null;
 
-        Edge? newEdge;
+                        CalculatePotentialEdges();
+                        return;
+                    }
+
+                }
+            }
+
+            if (_hoverVertex is not null)
+            {
+                BeginDrag(_hoverVertex, mousePos);
+            }
+            else if (_canPlace)
+            {
+                PlaceVertex(mousePos);
+                UpdateHover(mousePos);
+            }
+        }
+    }
+
+    private void HandleMouseMoved(object? sender, MouseMoveEventArgs e)
+    {
+        Vector2f mousePos = new(e.X, e.Y);
+
+        if (_isDragging)
+        {
+            UpdateDrag(mousePos);
+        }
+
+        UpdateHover(mousePos);
+
+        UpdateCanPlaceAt(mousePos);
 
         if (_hoverEdge is not null)
         {
             if (_hoverEdge.IsPotentialEdge)
             {
-                if (_hoverEdge.A.Connect(_hoverEdge.B, out newEdge))
-                {
-                    newEdge.Color = Theme.Current.EdgeFill;
-                    _edges.Add(newEdge);
-                    _hoverEdge = null;
-                    CalculatePotentialEdges();
-                    return;
-                }
+                _hoverEdge.IsVisible = false;
             }
-            else
+        }
+        _hoverEdge = null;
+
+        if (Keyboard.IsKeyPressed(Keyboard.Key.LShift) && !_isDragging)
+        {
+            if (SnapPointToNearestEdge(_edges, mousePos, 10.0f, out Edge? edge, out Vector2f intersection) ||
+                SnapPointToNearestEdge(_potentialEdges, mousePos, 30.0f, out edge, out intersection))
             {
-                if (_hoverEdge.A.Disconnect(_hoverEdge.B, out _))
+                float distanceMouse = Maths.Distance(mousePos, intersection);
+                if (distanceMouse <= VertexRadius * 2)
                 {
-                    _edges.Remove(_hoverEdge);
-                    if (_hoverEdge.A.Connections.Count == 0)
-                        _vertices.Remove(_hoverEdge.A);
-                    if (_hoverEdge.B.Connections.Count == 0)
-                        _vertices.Remove(_hoverEdge.B);
-                    _hoverEdge = null;
+                    _canPlace = false;
 
-                    CalculatePotentialEdges();
-                    return;
+                    float distanceA = Maths.Distance(edge.A.Position, intersection);
+                    float distanceB = Maths.Distance(edge.B.Position, intersection);
+                    if (distanceA > edge.A.Radius * 2 &&
+                        distanceB > edge.B.Radius * 2)
+                    {
+                        _hoverEdge = edge;
+                        if (_hoverEdge.IsPotentialEdge)
+                        {
+                            _hoverEdge.IsVisible = true;
+                        }
+                        _edgeHoverPoint = intersection;
+                    }
                 }
-
             }
         }
-
-        double minDistance = double.MaxValue;
-
-        _draggingVertex = GetVertexAtPoint(mousePosF);
-        if (_draggingVertex is not null)
-        {
-            _canPlace = true;
-            _dragOffset = _draggingVertex.Position - mousePosF;
-            return;
-        }
-
-        if (!_canPlace) return;
-
-        // Prevent placing vertices too close to each other.
-        if (minDistance <= (VertexRadius * 3)) return;
-
-        Vertex? linkVertex = FindNearestLinkableVertex(new Vector2f(e.X, e.Y));
-        if (linkVertex is null && _vertices.Count > 0)
-            return;
-
-        // Create a new vertex at the mouse location.
-        var newVertex = new Vertex(new Vector2f(e.X, e.Y), VertexRadius);
-
-        // Connect the last added vertex to the new vertex, if it exists.
-        if (linkVertex is not null &&
-            linkVertex.Connect(newVertex, out newEdge))
-        {
-            // Add the newly created edge.
-            _edges.Add(newEdge);
-        }
-
-        // Add the new vertex.
-        _vertices.Add(newVertex);
     }
 
     private void HandleMouseButtonReleased(object? sender, MouseButtonEventArgs e)
     {
-        if (e.Button == Mouse.Button.Left &&
-            _draggingVertex is not null)
+        Vector2f mousePos = new(e.X, e.Y);
+
+        if (e.Button == Mouse.Button.Left && _isDragging)
         {
-            _draggingVertex = null;
+            EndDrag(mousePos);
         }
 
         CalculatePotentialEdges();
@@ -457,7 +522,10 @@ public sealed class Visualizer
 
     private void Update()
     {
-        _hoverCircle.FillColor = (_draggingVertex is not null) ? (_canPlace ? Theme.Current.VertexDragging : Theme.Current.VertexDraggingInvalid) : Theme.Current.VertexHover;
+        _hoverCircle.FillColor =
+            (_draggingVertex is not null)
+            ? (_canPlace ? Theme.Current.VertexDragging : Theme.Current.VertexDraggingInvalid)
+            : Theme.Current.VertexHover;
     }
 
     private void Draw()

@@ -6,8 +6,8 @@ public class Edge
 {
     private readonly LineShape _lineShape = new()
     {
-        FillColor = Color.Green,
-        Weight = 3
+        FillColor = Theme.EdgeFill,
+        Weight = 6
     };
 
     public Vertex A { get; }

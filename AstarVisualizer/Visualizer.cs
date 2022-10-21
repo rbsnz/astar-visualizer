@@ -281,12 +281,7 @@ public sealed class Visualizer
 
     private void Draw()
     {
-        _window.Clear(Color.White);
-
-        foreach (var edge in _edges)
-        {
-            edge.Draw(_window);
-        }
+        _window.Clear(Theme.Background);
 
         foreach (var edge in _insertableEdges)
         {

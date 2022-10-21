@@ -554,7 +554,14 @@ public sealed class Visualizer
 
         foreach (var vertex in _vertices)
         {
+            if (vertex == _draggingVertex)
+                continue;
             vertex.Draw(_window);
+        }
+
+        if (_draggingVertex is not null)
+        {
+            _draggingVertex.Draw(_window);
         }
 
         if (_hoverVertex is not null)

@@ -51,7 +51,7 @@ public class Vertex
         {
             Origin = new Vector2f(radius, radius),
             Position = _position,
-            FillColor = Theme.VertexFill,
+            FillColor = Theme.Current.VertexFill,
             OutlineColor = Color.Black,
             OutlineThickness = 2
         };

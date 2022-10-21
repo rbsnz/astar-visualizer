@@ -153,7 +153,7 @@ public sealed class Visualizer
                     continue;
                 
                 _potentialEdges.Add(new Edge(vertexA, vertexB) {
-                    Color = Theme.PotentialEdgeFill,
+                    Color = Theme.Current.PotentialEdgeFill,
                     Weight = 4,
                     IsPotentialEdge = true,
                     IsVisible = false
@@ -373,7 +373,7 @@ public sealed class Visualizer
             {
                 if (_hoverEdge.A.Connect(_hoverEdge.B, out newEdge))
                 {
-                    newEdge.Color = Theme.EdgeFill;
+                    newEdge.Color = Theme.Current.EdgeFill;
                     _edges.Add(newEdge);
                     _hoverEdge = null;
                     CalculatePotentialEdges();
@@ -457,12 +457,12 @@ public sealed class Visualizer
 
     private void Update()
     {
-        _hoverCircle.FillColor = (_draggingVertex is not null) ? (_canPlace ? Theme.VertexDragging : Theme.VertexDraggingInvalid) : Theme.VertexHover;
+        _hoverCircle.FillColor = (_draggingVertex is not null) ? (_canPlace ? Theme.Current.VertexDragging : Theme.Current.VertexDraggingInvalid) : Theme.Current.VertexHover;
     }
 
     private void Draw()
     {
-        _window.Clear(Theme.Background);
+        _window.Clear(Theme.Current.Background);
 
         foreach (var edge in _edges.Concat(_potentialEdges))
         {

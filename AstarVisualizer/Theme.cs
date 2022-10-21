@@ -1,37 +1,34 @@
-﻿using System.Globalization;
+﻿using System.Text.Json;
 
 using SFML.Graphics;
 
+using AstarVisualizer.Serialization;
+
 namespace AstarVisualizer;
 
-internal static class Theme
+public class Theme
 {
-    static Color FromHex(string hex)
+    private static readonly JsonSerializerOptions SerializerOptions = new()
     {
-        if (string.IsNullOrWhiteSpace(hex))
-            throw new ArgumentException("Value cannot be empty.", nameof(hex));
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+        Converters = { new ColorConverter() }
+    };
 
-        if (hex.StartsWith('#'))
-            hex = hex[1..];
+    public static Theme Current { get; set; } = Load(@"theme\default.json");
 
-        if ((hex.Length != 6 && hex.Length != 8) ||
-            !uint.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint value))
-        {
-            throw new ArgumentException("Not a valid hex color.", nameof(hex));
-        }
+    public Color Background { get; set; }
+    public Color VertexFill { get; set; }
+    public Color EdgeFill { get; set; }
+    public Color PotentialEdgeFill { get; set; }
+    public Color VertexHover { get; set; }
+    public Color VertexDragging { get; set; }
+    public Color VertexDraggingInvalid { get; set; }
 
-        if (hex.Length == 6)
-            value = value << 8 | 0xFF;
-
-        return new Color(value);
+    public static Theme Load(string path)
+    {
+        string json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<Theme>(json, SerializerOptions)
+            ?? throw new JsonException("Failed to deserialize theme.");
     }
-
-    public static readonly Color Background = FromHex("1B2430");
-    public static readonly Color VertexFill = FromHex("D6D5A8");
-    public static readonly Color EdgeFill = FromHex("29C7AC");
-    public static readonly Color PotentialEdgeFill = FromHex("29C7AC");
-
-    public static readonly Color VertexHover = FromHex("FFFFFF55");
-    public static readonly Color VertexDragging = FromHex("FFFFFF88");
-    public static readonly Color VertexDraggingInvalid = FromHex("FF880055");
 }

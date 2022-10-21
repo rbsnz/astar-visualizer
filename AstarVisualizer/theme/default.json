@@ -1,0 +1,9 @@
+﻿{
+  "Background": "1B2430",
+  "VertexFill": "D6D5A8",
+  "EdgeFill": "29C7AC",
+  "PotentialEdgeFill": "29C7AC",
+  "VertexHover": "FFFFFF55",
+  "VertexDragging": "FFFFFF88",
+  "VertexDraggingInvalid": "FF880055"
+}

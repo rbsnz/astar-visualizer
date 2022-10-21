@@ -6,7 +6,7 @@ public class Edge
 {
     private readonly LineShape _lineShape = new()
     {
-        FillColor = Theme.EdgeFill,
+        FillColor = Theme.Current.EdgeFill,
         Weight = 6
     };
 

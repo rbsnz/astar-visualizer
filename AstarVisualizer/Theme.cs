@@ -12,11 +12,16 @@ public class Theme
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true,
-        Converters = { new ColorConverter() }
+        Converters =
+        {
+            new ColorConverter(),
+            new FontConverter()
+        }
     };
 
-    public static Theme Current { get; set; } = Load(@"theme\default.json");
+    public static Theme Current { get; set; } = Load(@"res\theme\default.json");
 
+    public Font Font { get; set; } = null!;
     public Color Background { get; set; }
     public Color VertexFill { get; set; }
     public Color EdgeFill { get; set; }

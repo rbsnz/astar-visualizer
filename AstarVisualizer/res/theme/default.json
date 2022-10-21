@@ -1,4 +1,5 @@
 ﻿{
+  "Font": "res/font/Hack-Regular.ttf",
   "Background": "1B2430",
   "VertexFill": "D6D5A8",
   "EdgeFill": "29C7AC",

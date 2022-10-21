@@ -18,7 +18,7 @@ public struct Line
     /// <summary>
     /// Calculates the angle of this line.
     /// </summary>
-    public float Angle => MathF.Atan2(PointB.Y - PointB.Y, PointB.X - PointA.X);
+    public float Angle => MathF.Atan2(PointB.Y - PointA.Y, PointB.X - PointA.X);
 
     public Line()
     {

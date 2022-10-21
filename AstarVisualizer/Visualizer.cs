@@ -45,7 +45,7 @@ public sealed class Visualizer
     public Visualizer()
     {
         _videoMode = new VideoMode(1280, 720);
-        _window = new RenderWindow(_videoMode, "ISCG6426 Data Structures & Algorithms - A* Visualizer",
+        _window = new RenderWindow(_videoMode, "A* Visualizer",
             Styles.Titlebar | Styles.Close, new ContextSettings() { AntialiasingLevel = 8 });
         _window.SetVerticalSyncEnabled(true);
         _window.Closed += (s, e) => _window.Close();

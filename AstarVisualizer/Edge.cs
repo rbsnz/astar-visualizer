@@ -10,13 +10,20 @@ public class Edge
         Weight = 6
     };
 
+    /// <summary>
+    /// Gets the first vertex connected to this edge.
+    /// </summary>
     public Vertex A { get; }
+
+    /// <summary>
+    /// Gets the second vertex connected to this edge.
+    /// </summary>
     public Vertex B { get; }
 
     /// <summary>
-    /// Gets if this edge belongs to the specified vertex.
+    /// Gets if this edge is connected to the specified vertex.
     /// </summary>
-    public bool BelongsTo(Vertex vertex) => vertex == A || vertex == B;
+    public bool IsConnectedTo(Vertex vertex) => vertex == A || vertex == B;
 
     /// <summary>
     /// Gets a line that represents this edge.
@@ -51,6 +58,11 @@ public class Edge
     /// </summary>
     public bool IsVisible { get; set; } = true;
 
+    /// <summary>
+    /// Constructs a new edge that connects the specified vertices.
+    /// </summary>
+    /// <param name="a">The first vertex.</param>
+    /// <param name="b">The second vertex.</param>
     public Edge(Vertex a, Vertex b)
     {
         A = a;
@@ -58,14 +70,20 @@ public class Edge
         Update();
     }
 
+    /// <summary>
+    /// Updates the geometry for this edge.
+    /// </summary>
     public void Update()
     {
         _lineShape.PointA = A.Position;
         _lineShape.PointB = B.Position;
     }
 
-    public void Draw(RenderWindow window)
+    /// <summary>
+    /// Draws this edge to the specified render target.
+    /// </summary>
+    public void Draw(RenderTarget target)
     {
-        window.Draw(_lineShape);
+        target.Draw(_lineShape);
     }
 }

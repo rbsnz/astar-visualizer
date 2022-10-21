@@ -143,7 +143,7 @@ public sealed class Visualizer
                 bool valid = true;
                 foreach (var edge in _edges)
                 {
-                    if (edge.BelongsTo(vertexA) || edge.BelongsTo(vertexB)) continue;
+                    if (edge.IsConnectedTo(vertexA) || edge.IsConnectedTo(vertexB)) continue;
 
                     if (Line.Intersects(edge.Line, new Line(vertexA.Position, vertexB.Position), out _))
                     {

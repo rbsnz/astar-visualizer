@@ -8,8 +8,14 @@ public class LineShape : RectangleShape
     private float _weight;
     private Vector2f _pointA, _pointB;
 
-    public float Distance { get; private set; }
+    /// <summary>
+    /// Gets the length of this line.
+    /// </summary>
+    public float Length { get; private set; }
 
+    /// <summary>
+    /// Gets or sets the weight of this line.
+    /// </summary>
     public float Weight
     {
         get => _weight;
@@ -18,10 +24,13 @@ public class LineShape : RectangleShape
             if (_weight == value)
                 return;
             _weight = value;
-            CalculateShape();
+            CalculateGeometry();
         }
     }
 
+    /// <summary>
+    /// Gets or sets the first point of this line.
+    /// </summary>
     public Vector2f PointA
     {
         get => _pointA;
@@ -30,10 +39,13 @@ public class LineShape : RectangleShape
             if (_pointA == value)
                 return;
             _pointA = value;
-            CalculateShape();
+            CalculateGeometry();
         }
     }
 
+    /// <summary>
+    /// Gets or sets the second point of this line.
+    /// </summary>
     public Vector2f PointB
     {
         get => _pointB;
@@ -42,14 +54,17 @@ public class LineShape : RectangleShape
             if (_pointB == value)
                 return;
             _pointB = value;
-            CalculateShape();
+            CalculateGeometry();
         }
     }
 
-    private void CalculateShape()
+    /// <summary>
+    /// Calculates the geometry of this line.
+    /// </summary>
+    private void CalculateGeometry()
     {
-        Distance = Maths.Distance(PointA, PointB);
-        Size = new Vector2f(Distance + _weight, _weight);
+        Length = Maths.Distance(PointA, PointB);
+        Size = new Vector2f(Length + _weight, _weight);
         Origin = new Vector2f(_weight / 2, _weight / 2);
 
         Position = PointA;

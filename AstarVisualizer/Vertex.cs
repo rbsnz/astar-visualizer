@@ -11,6 +11,9 @@ public class Vertex
     private readonly CircleShape _circle;
     private readonly Dictionary<Vertex, Edge> _edges = new();
 
+    /// <summary>
+    /// Gets or sets the position of this vertex.
+    /// </summary>
     public Vector2f Position
     {
         get => _position;
@@ -35,15 +38,24 @@ public class Vertex
     /// </summary>
     public float Y => Position.Y;
 
+    /// <summary>
+    /// Gets the visual radius of this vertex.
+    /// </summary>
+    public float Radius => _circle.Radius;
 
-    public float Radius
-    {
-        get => _circle.Radius;
-    }
-
+    /// <summary>
+    /// Gets the vertices connected to this vertex.
+    /// </summary>
     public IReadOnlyCollection<Vertex> Connections => _edges.Keys;
+
+    /// <summary>
+    /// Gets the edges connected to this vertex.
+    /// </summary>
     public IReadOnlyCollection<Edge> Edges => _edges.Values;
 
+    /// <summary>
+    /// Constructs a new vertex with the specified position and radius.
+    /// </summary>
     public Vertex(Vector2f position, float radius)
     {
         _position = position;
@@ -89,7 +101,7 @@ public class Vertex
     public bool IsConnectedTo(Vertex other) => _edges.ContainsKey(other);
 
     /// <summary>
-    /// Disconnect this vertex from another vertex.
+    /// Disconnects this vertex from another vertex.
     /// </summary>
     /// <param name="other">The other vertex to remove the connection from.</param>
     /// <returns><see langword="true"/> if the connection was removed, or <see langword="false"/> if it does not exist.</returns>
@@ -105,8 +117,11 @@ public class Vertex
         return true;
     }
 
-    public void Draw(RenderTarget g)
+    /// <summary>
+    /// Draws this vertex to the specified render target.
+    /// </summary>
+    public void Draw(RenderTarget target)
     {
-        g.Draw(_circle);
+        target.Draw(_circle);
     }
 }

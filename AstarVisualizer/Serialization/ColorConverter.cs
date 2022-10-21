@@ -5,6 +5,9 @@ using SFML.Graphics;
 
 namespace AstarVisualizer.Serialization;
 
+/// <summary>
+/// Allows deserialization from a <see cref="string"/> to a <see cref="Color"/>.
+/// </summary>
 public class ColorConverter : JsonConverter<Color>
 {
     static Color FromHex(string hex)

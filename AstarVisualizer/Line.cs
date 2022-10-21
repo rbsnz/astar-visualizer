@@ -7,7 +7,14 @@ namespace AstarVisualizer;
 /// </summary>
 public struct Line
 {
+    /// <summary>
+    /// The first point of this line segment.
+    /// </summary>
     public Vector2f PointA;
+
+    /// <summary>
+    /// The second point of this line segment.
+    /// </summary>
     public Vector2f PointB;
 
     /// <summary>
@@ -19,12 +26,6 @@ public struct Line
     /// Calculates the angle of this line.
     /// </summary>
     public float Angle => MathF.Atan2(PointB.Y - PointA.Y, PointB.X - PointA.X);
-
-    public Line()
-    {
-        PointA = new();
-        PointB = new();
-    }
 
     /// <summary>
     /// Constructs a new line segment between the specified points.

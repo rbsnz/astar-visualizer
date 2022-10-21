@@ -10,12 +10,27 @@ public struct Line
     public Vector2f PointA;
     public Vector2f PointB;
 
+    /// <summary>
+    /// Calculates the length of this line.
+    /// </summary>
+    public float Length => Maths.Distance(PointA, PointB);
+
+    /// <summary>
+    /// Calculates the angle of this line.
+    /// </summary>
+    public float Angle => MathF.Atan2(PointB.Y - PointB.Y, PointB.X - PointA.X);
+
     public Line()
     {
         PointA = new();
         PointB = new();
     }
 
+    /// <summary>
+    /// Constructs a new line segment between the specified points.
+    /// </summary>
+    /// <param name="pointA">The first point.</param>
+    /// <param name="pointB">The second point.</param>
     public Line(Vector2f pointA, Vector2f pointB)
     {
         PointA = pointA;
@@ -23,7 +38,18 @@ public struct Line
     }
 
     /// <summary>
-    /// Calculates the point at which two lines intersect.
+    /// Constructs a new line segment between the specified point coordinates.
+    /// </summary>
+    /// <param name="x1">The X coordinate of the first point.</param>
+    /// <param name="y1">The Y coordinate of the first point.</param>
+    /// <param name="x2">The X coordinate of the second point.</param>
+    /// <param name="y2">The Y coordinate of the second point.</param>
+    public Line(float x1, float y1, float x2, float y2)
+        : this(new Vector2f(x1, y1), new Vector2f(x2, y2))
+    { }
+
+    /// <summary>
+    /// Calculates the point at which two line segments intersect.
     /// </summary>
     /// <remarks>
     /// Reference: <see href="https://en.wikipedia.org/wiki/Line–line_intersection#Given_two_points_on_each_line_segment"/>

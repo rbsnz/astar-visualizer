@@ -25,6 +25,17 @@ public class Vertex
         }
     }
 
+    /// <summary>
+    /// Gets the X coordinate of this vertex.
+    /// </summary>
+    public float X => Position.X;
+
+    /// <summary>
+    /// Gets the Y coordinate of this vertex.
+    /// </summary>
+    public float Y => Position.Y;
+
+
     public float Radius
     {
         get => _circle.Radius;
@@ -45,6 +56,11 @@ public class Vertex
             OutlineThickness = 2
         };
     }
+
+    /// <summary>
+    /// Gets if this vertex belongs to the specified edge.
+    /// </summary>
+    public bool BelongsTo(Edge edge) => (this == edge.A) || (this == edge.B);
 
     /// <summary>
     /// Connects this vertex to another vertex and produces an edge.

@@ -27,6 +27,14 @@ public sealed class Visualizer
     private readonly List<Edge> _edges = new();
     private readonly List<Edge> _potentialEdges = new();
 
+    private readonly Text _creditText = new()
+    {
+        Font = Theme.Current.Font,
+        CharacterSize = 16,
+        DisplayedString = "A* Visualizer by rob",
+        FillColor = new Color(255, 255, 255, 100)
+    };
+
     private readonly CircleShape _hoverCircle = new()
     {
         FillColor = new Color(255, 255, 255, 55),
@@ -75,6 +83,10 @@ public sealed class Visualizer
         _window.MouseButtonPressed += HandleMouseButtonPressed;
         _window.MouseButtonReleased += HandleMouseButtonReleased;
         _window.KeyPressed += HandleKeyPressed;
+
+        var textBounds = _creditText.GetLocalBounds();
+        _creditText.Origin = new Vector2f(0, textBounds.Height);
+        _creditText.Position = new Vector2f(10, _videoMode.Height - 10);
     }
 
     private void HandleKeyPressed(object? sender, KeyEventArgs e)
@@ -689,6 +701,8 @@ public sealed class Visualizer
 
         if (_hoverVertex is not null)
             _window.Draw(_hoverCircle);
+
+        _window.Draw(_creditText);
 
         _window.Display();
     }

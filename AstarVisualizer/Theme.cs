@@ -30,6 +30,22 @@ public class Theme
     public Color VertexDragging { get; set; }
     public Color VertexDraggingInvalid { get; set; }
 
+    public Color VertexOutline { get; set; }
+    public Color VertexOutlineOpen { get; set; }
+    public Color VertexOutlineClosed { get; set; }
+
+    public Color VertexUnvisited { get; set; }
+    public Color VertexInspecting { get; set; }
+    public Color VertexPotential { get; set; }
+    public Color VertexEliminated { get; set; }
+    public Color VertexSuccess { get; set; }
+
+    public Color EdgeStateUnvisited { get; set; }
+    public Color EdgeStatePotential { get; set; }
+    public Color EdgeStateInspecting { get; set; }
+    public Color EdgeStateEliminated { get; set; }
+    public Color EdgeStateSuccess { get; set; }
+
     public static Theme Load(string path)
     {
         string json = File.ReadAllText(path);

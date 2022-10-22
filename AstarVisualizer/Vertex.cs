@@ -8,9 +8,9 @@ namespace AstarVisualizer;
 public class Vertex
 {
     private Vector2f _position;
-    private readonly CircleShape _circle;
     private readonly Dictionary<Vertex, Edge> _edges = new();
 
+    private readonly CircleShape _circle;
     private readonly Text _labelText = new()
     {
         Font = Theme.Current.Font,
@@ -25,7 +25,7 @@ public class Vertex
     {
         get => _position;
         set => UpdatePosition(value);
-            }
+    }
 
     /// <summary>
     /// Gets the X coordinate of this vertex.
@@ -56,6 +56,26 @@ public class Vertex
     /// Gets the edges connected to this vertex.
     /// </summary>
     public IReadOnlyCollection<Edge> Edges => _edges.Values;
+
+    private AState _state;
+    public AState State
+    {
+        get => _state;
+        set
+        {
+            _state = value;
+            _circle.FillColor = _state switch
+            {
+                AState.None => Theme.Current.VertexFill,
+                AState.Unvisited => Theme.Current.VertexUnvisited,
+                AState.Inspecting => Theme.Current.VertexInspecting,
+                AState.Potential => Theme.Current.VertexPotential,
+                AState.Eliminated => Theme.Current.VertexEliminated,
+                AState.Success => Theme.Current.VertexSuccess,
+                _ => Theme.Current.VertexFill
+            };
+        }
+    }
 
     /// <summary>
     /// Constructs a new vertex with the specified position and radius.
@@ -91,6 +111,8 @@ public class Vertex
         foreach (var edge in _edges.Values)
             edge.Update();
     }
+
+    public Edge GetEdge(Vertex other) => _edges[other];
 
     /// <summary>
     /// Gets if this vertex belongs to the specified edge.

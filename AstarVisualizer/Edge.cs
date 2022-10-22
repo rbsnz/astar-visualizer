@@ -1,14 +1,11 @@
 ﻿using SFML.Graphics;
+using SFML.System;
 
 namespace AstarVisualizer;
 
 public class Edge
 {
-    private readonly LineShape _lineShape = new()
-    {
-        FillColor = Theme.Current.EdgeFill,
-        Weight = 6
-    };
+    private readonly LineShape _lineShape = new() { Weight = 6 };
 
     /// <summary>
     /// Gets the first vertex connected to this edge.
@@ -58,6 +55,26 @@ public class Edge
     /// </summary>
     public bool IsVisible { get; set; } = true;
 
+    private AState _state = AState.None;
+    public AState State
+    {
+        get => _state;
+        set
+        {
+            _state = value;
+            Color = _state switch
+            {
+                AState.Unvisited => Theme.Current.EdgeStateUnvisited,
+                AState.None => Theme.Current.EdgeFill,
+                AState.Potential => Theme.Current.EdgeStatePotential,
+                AState.Inspecting => Theme.Current.EdgeStateInspecting,
+                AState.Eliminated => Theme.Current.EdgeStateEliminated,
+                AState.Success => Theme.Current.EdgeStateSuccess,
+                _ => new Color(255, 0, 0)
+            };
+        }
+    }
+
     /// <summary>
     /// Constructs a new edge that connects the specified vertices.
     /// </summary>
@@ -67,6 +84,7 @@ public class Edge
     {
         A = a;
         B = b;
+        Color = Theme.Current.EdgeFill;
         Update();
     }
 

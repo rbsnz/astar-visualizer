@@ -6,5 +6,18 @@
   "PotentialEdgeFill": "29C7AC",
   "VertexHover": "FFFFFF55",
   "VertexDragging": "FFFFFF88",
-  "VertexDraggingInvalid": "FF880055"
+  "VertexDraggingInvalid": "FF880055",
+  "VertexOutline": "000000",
+  "VertexUnvisited": "D6D5A8",
+  "VertexInspecting": "a349a4",
+  "VertexPotential": "00a2e8",
+  "VertexEliminated": "ff7f27",
+  "VertexSuccess": "22b14c",
+  "VertexOutlineOpen": "009999",
+  "VertexOutlineClosed": "999900",
+  "EdgeStateUnvisited": "c3c3c3",
+  "EdgeStatePotential": "00a2e8",
+  "EdgeStateInspecting": "a349a4",
+  "EdgeStateEliminated": "ff7f27",
+  "EdgeStateSuccess": "22b14c"
 }

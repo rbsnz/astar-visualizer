@@ -1,4 +1,6 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 using SFML.Graphics;
 using SFML.System;
@@ -32,6 +34,20 @@ public sealed class Visualizer
         Origin = new Vector2f(VertexRadius * 2, VertexRadius * 2)
     };
 
+    private readonly CircleShape _startCircle = new()
+    {
+        FillColor = new Color(0, 200, 200, 100),
+        Radius = VertexRadius * 2,
+        Origin = new Vector2f(VertexRadius * 2, VertexRadius * 2)
+    };
+
+    private readonly CircleShape _goalCircle = new()
+    {
+        FillColor = new Color(0, 255, 0, 100),
+        Radius = VertexRadius * 2,
+        Origin = new Vector2f(VertexRadius * 2, VertexRadius * 2)
+    };
+
     private Vertex? _hoverVertex;
     private bool _canPlace;
 
@@ -43,7 +59,9 @@ public sealed class Visualizer
     private Edge? _hoverEdge;
     private Vector2f _edgeHoverPoint;
 
-    private Vertex? start, goal;
+    private Vertex? _start, _goal;
+
+    private IEnumerator? _astarEnumerator;
 
     public Visualizer()
     {
@@ -56,54 +74,157 @@ public sealed class Visualizer
         _window.MouseMoved += HandleMouseMoved;
         _window.MouseButtonPressed += HandleMouseButtonPressed;
         _window.MouseButtonReleased += HandleMouseButtonReleased;
+        _window.KeyPressed += HandleKeyPressed;
     }
 
-    #region A*
-    private List<Vertex>? AStar(Vertex start, Vertex goal, HeuristicFunc h)
+    private void HandleKeyPressed(object? sender, KeyEventArgs e)
     {
-        PriorityQueue<Vertex, float> openSet = new();
+        if (e.Code == Keyboard.Key.Space)
+        {
+            if (_astarEnumerator is not null)
+            {
+                if (_astarEnumerator.MoveNext())
+                {
+                    Debug.WriteLine(_astarEnumerator.Current);
+                }
+                else
+                {
+                    _start = null;
+                    _goal = null;
+                }
+            }
+        }
+    }
 
-        openSet.Enqueue(start, 0);
+    #region A* Search
+    private IEnumerable AStar(Vertex start, Vertex goal, HeuristicFunc h)
+    {
+        foreach (var vertex in _vertices)
+            vertex.State = AState.Unvisited;
+        foreach (var edge in _edges)
+            edge.State = AState.Unvisited;
+
+        HashSet<Vertex> openSet = new() { start };
 
         Dictionary<Vertex, Vertex> cameFrom = new();
-
         Dictionary<Vertex, float> gScore = new();
-
         Dictionary<Vertex, float> fScore = new();
+
+        // Traverses the path back from the specified vertex and eliminates dead edges.
+        List<Vertex> eliminatePath(Vertex current)
+        {
+            List<Vertex> eliminated = new();
+            // Traverse back where we came from.
+            
+            while (cameFrom.ContainsKey(current))
+            {
+                // Vertices are only eliminated if they have <= 1 open paths.
+                if (current.Edges.Count(x => x.State != AState.Eliminated) > 1)
+                    break;
+                var previous = cameFrom[current];
+                eliminated.Add(current);
+                current.State = AState.Eliminated;
+                current.GetEdge(previous).State = AState.Eliminated;
+                current = previous;
+            }
+            eliminated.Add(current);
+            eliminated.Reverse();
+            return eliminated;
+        }
 
         gScore[start] = 0;
         fScore[start] = h(start, goal);
 
+        yield return "Begin";
+
         while (openSet.Count > 0)
         {
-            Vertex current = openSet.Dequeue();
+            Vertex? current = openSet.MinBy(x => fScore[x]);
+            if (current is null) break;
+            openSet.Remove(current);
+
+            current.State = AState.Inspecting;
+            yield return $"Inspecting vertex: {current.Label}";
+
             if (current == goal)
             {
+                current.State = AState.Success;
                 List<Vertex> path = new() { current };
                 while (cameFrom.ContainsKey(current))
                 {
+                    current.GetEdge(cameFrom[current]).State = AState.Success;
                     current = cameFrom[current];
+                    current.State = AState.Success;
                     path.Insert(0, current);
                 }
-                return path;
+                yield return "Found goal.";
+                yield break;
             }
 
+            cameFrom.TryGetValue(current, out Vertex? cameFromCurrent);
             foreach (Vertex neighbor in current.Connections)
             {
+                // Skip the neighbor if it's where we currently came from.
+                if (neighbor == cameFromCurrent) continue;
+
+                // Skip the edge if it has been eliminated.
+                if (current.GetEdge(neighbor).State == AState.Eliminated) continue;
+
+                cameFrom.TryGetValue(neighbor, out Vertex? previouslyCameFrom);
+
+                Edge edge = current.GetEdge(neighbor);
+                AState previousState = edge.State;
+
                 float tentativeGscore = gScore.GetValueOrDefault(current, float.PositiveInfinity)
                     + Maths.Distance(current.Position, neighbor.Position);
+                edge.State = AState.Inspecting;
+                yield return $"Calculate tentative GScore for vertex {neighbor.Label}: {tentativeGscore:N0}";
                 if (tentativeGscore < gScore.GetValueOrDefault(neighbor, float.PositiveInfinity))
                 {
+                    // If there was already a path to this vertex, we can eliminate the previous path.
+                    // This is not part of the A* algorithm, it is purely for visual representation of discarded paths.
+                    if (previouslyCameFrom is not null)
+                    {
+                        previouslyCameFrom.GetEdge(neighbor).State = AState.Eliminated;
+                        var eliminated = eliminatePath(neighbor);
+                        yield return $"Eliminated previous path to vertex {neighbor.Label}: {string.Join("->", eliminated.Select(x => x.Label))}";
+                    }
+
+                    float currentFscore = tentativeGscore + h(neighbor, goal);
+
                     cameFrom[neighbor] = current;
                     gScore[neighbor] = tentativeGscore;
-                    fScore[neighbor] = tentativeGscore + h(neighbor, goal);
-                    if (!openSet.UnorderedItems.Any(x => x.Element == neighbor))
-                        openSet.Enqueue(neighbor, fScore[neighbor]);
+                    fScore[neighbor] = currentFscore;
+
+                    neighbor.State = AState.Potential;
+                    edge.State = AState.Potential;
+
+                    if (openSet.Add(neighbor))
+                    {
+                        yield return $"Added vertex {neighbor.Label} to the open set (fScore = {currentFscore:N0})";
+                    }
                 }
+                else
+                {
+                    edge.State = AState.Eliminated;
+                    yield return $"Vertex {neighbor.Label} has a shorter path leading to it";
+                }
+            }
+
+            if (current != start &&
+                current.Edges.Count(x => x.State != AState.Eliminated) <= 1)
+            {
+                var eliminated = eliminatePath(current);
+                if (eliminated.Count > 0)
+                    yield return $"Eliminated path: {string.Join("->", eliminated.Select(x => x.Label))}";
+            }
+            else
+            {
+                current.State = AState.Potential;
             }
         }
 
-        return null;
+        yield return "No solution found";
     }
     #endregion
 
@@ -373,37 +494,27 @@ public sealed class Visualizer
 
         if (_hoverVertex != null && e.Button == Mouse.Button.Right)
         {
-            if (goal is null)
+            if (_goal is null)
             {
-                if (start is null)
+                if (_start is null)
                 {
                     foreach (var edge in _edges)
                     {
                         edge.Color = new Color(0, 255, 0);
                     }
-                    start = _hoverVertex;
+                    _start = _hoverVertex;
+                    _startCircle.Position = _start.Position;
                     return;
                 }
-                else if (start == _hoverVertex)
+                else if (_start == _hoverVertex)
                 {
                     return;
                 }
 
-                goal = _hoverVertex;
+                _goal = _hoverVertex;
+                _goalCircle.Position = _goal.Position;
 
-                List<Vertex>? path = AStar(start, goal, Heuristics.Euclidean);
-                if (path is not null)
-                {
-                    for (int i = 0; i < path.Count - 1; i++)
-                    {
-                        Vertex next = path[i + 1];
-                        Edge pathEdge = path[i].Edges.First(e => e.A == next || e.B == next);
-                        pathEdge.Color = new Color(255, 0, 255);
-                    }
-                }
-
-                start = null;
-                goal = null;
+                _astarEnumerator = AStar(_start, _goal, Heuristics.Euclidean).GetEnumerator();
             }
         }
 
@@ -536,6 +647,11 @@ public sealed class Visualizer
     private void Draw()
     {
         _window.Clear(Theme.Current.Background);
+
+        if (_start is not null)
+            _window.Draw(_startCircle);
+        if (_goal is not null)
+            _window.Draw(_goalCircle);
 
         foreach (var edge in _edges.Concat(_potentialEdges))
         {

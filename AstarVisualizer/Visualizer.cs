@@ -118,14 +118,15 @@ public sealed class Visualizer
             
             while (cameFrom.ContainsKey(current))
             {
-                // Vertices are only eliminated if they have <= 1 open paths.
-                if (current.Edges.Count(x => x.State != AState.Eliminated) > 1)
-                    break;
                 var previous = cameFrom[current];
                 eliminated.Add(current);
                 current.State = AState.Eliminated;
                 current.GetEdge(previous).State = AState.Eliminated;
                 current = previous;
+                
+                // Vertices are only eliminated if they have <= 1 open paths.
+                if (current.Edges.Count(x => x.State != AState.Eliminated) > 1)
+                    break;
             }
             eliminated.Add(current);
             eliminated.Reverse();
@@ -187,7 +188,8 @@ public sealed class Visualizer
                     {
                         previouslyCameFrom.GetEdge(neighbor).State = AState.Eliminated;
                         var eliminated = eliminatePath(neighbor);
-                        yield return $"Eliminated previous path to vertex {neighbor.Label}: {string.Join("->", eliminated.Select(x => x.Label))}";
+                        neighbor.State = AState.Potential;
+                        yield return $"Found shorter route to vertex {neighbor.Label}, eliminated path {string.Join("->", eliminated.Select(x => x.Label))}";
                     }
 
                     float currentFscore = tentativeGscore + h(neighbor, goal);

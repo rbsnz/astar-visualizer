@@ -27,11 +27,22 @@ public sealed class Visualizer
     private readonly List<Edge> _edges = new();
     private readonly List<Edge> _potentialEdges = new();
 
+    private readonly List<string> _log = new();
+    private const int MaxLogLines = 10;
+
     private readonly Text _creditText = new()
     {
         Font = Theme.Current.Font,
         CharacterSize = 16,
         DisplayedString = "A* Visualizer by rob",
+        FillColor = new Color(255, 255, 255, 100)
+    };
+
+    private readonly Text _logText = new()
+    {
+        Font = Theme.Current.Font,
+        CharacterSize = 14,
+        DisplayedString = "",
         FillColor = new Color(255, 255, 255, 100)
     };
 
@@ -87,16 +98,22 @@ public sealed class Visualizer
         var textBounds = _creditText.GetLocalBounds();
         _creditText.Origin = new Vector2f(0, textBounds.Height);
         _creditText.Position = new Vector2f(10, _videoMode.Height - 10);
+
+        _logText.Position = new Vector2f(10, 10);
     }
 
     private void HandleKeyPressed(object? sender, KeyEventArgs e)
     {
-        if (e.Code == Keyboard.Key.Space)
+        if (e.Code == Keyboard.Key.Space || e.Code == Keyboard.Key.N)
         {
             if (_astarEnumerator is not null)
             {
                 if (_astarEnumerator.MoveNext())
                 {
+                    _log.Add($"{_astarEnumerator.Current}");
+                    while (_log.Count > MaxLogLines)
+                        _log.RemoveAt(0);
+                    _logText.DisplayedString = string.Join("\n", _log);
                     Debug.WriteLine(_astarEnumerator.Current);
                 }
                 else
@@ -111,6 +128,9 @@ public sealed class Visualizer
     #region A* Search
     private IEnumerable AStar(Vertex start, Vertex goal, HeuristicFunc h)
     {
+        _log.Clear();
+        _logText.DisplayedString = string.Empty;
+
         foreach (var vertex in _vertices)
             vertex.State = AState.Unvisited;
         foreach (var edge in _edges)
@@ -191,7 +211,7 @@ public sealed class Visualizer
                 float tentativeGscore = gScore.GetValueOrDefault(current, float.PositiveInfinity)
                     + Maths.Distance(current.Position, neighbor.Position);
                 edge.State = AState.Inspecting;
-                yield return $"Calculate tentative GScore for vertex {neighbor.Label}: {tentativeGscore:N0}";
+                yield return $"Tentative GScore for vertex {neighbor.Label} = {tentativeGscore:N0}";
                 if (tentativeGscore < gScore.GetValueOrDefault(neighbor, float.PositiveInfinity))
                 {
                     // If there was already a path to this vertex, we can eliminate the previous path.
@@ -215,13 +235,13 @@ public sealed class Visualizer
 
                     if (openSet.Add(neighbor))
                     {
-                        yield return $"Added vertex {neighbor.Label} to the open set (fScore = {currentFscore:N0})";
+                        yield return $"Added vertex {neighbor.Label} to open set, fScore = {currentFscore:N0}";
                     }
                 }
                 else
                 {
                     edge.State = AState.Eliminated;
-                    yield return $"Vertex {neighbor.Label} has a shorter path leading to it";
+                    yield return $"Vertex {neighbor.Label} has a shorter route";
                 }
             }
 
@@ -701,6 +721,8 @@ public sealed class Visualizer
 
         if (_hoverVertex is not null)
             _window.Draw(_hoverCircle);
+
+        _window.Draw(_logText);
 
         _window.Draw(_creditText);
 

@@ -311,7 +311,6 @@ public sealed class Visualizer
                     continue;
                 
                 _potentialEdges.Add(new Edge(vertexA, vertexB) {
-                    Color = Theme.Current.PotentialEdgeFill,
                     Weight = 4,
                     IsPotentialEdge = true,
                     IsVisible = false
@@ -532,10 +531,6 @@ public sealed class Visualizer
             {
                 if (_start is null)
                 {
-                    foreach (var edge in _edges)
-                    {
-                        edge.Color = new Color(0, 255, 0);
-                    }
                     _start = _hoverVertex;
                     _startCircle.Position = _start.Position;
                     return;
@@ -560,7 +555,6 @@ public sealed class Visualizer
                 {
                     if (_hoverEdge.A.Connect(_hoverEdge.B, out Edge? newEdge))
                     {
-                        newEdge.Color = Theme.Current.EdgeFill;
                         _edges.Add(newEdge);
                         _hoverEdge = null;
                         CalculatePotentialEdges();

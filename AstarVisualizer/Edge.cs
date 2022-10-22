@@ -42,7 +42,7 @@ public class Edge
     public Color Color
     {
         get => _lineShape.FillColor;
-        set => _lineShape.FillColor = value;
+        protected set => _lineShape.FillColor = value;
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ public class Edge
     {
         A = a;
         B = b;
-        Color = Theme.Current.EdgeFill;
+        State = AState.None;
         Update();
     }
 

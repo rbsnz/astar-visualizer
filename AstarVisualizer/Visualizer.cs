@@ -264,7 +264,12 @@ public sealed class Visualizer
         if (!_canPlace) return;
 
         // Create a new vertex at the position.
-        var newVertex = new Vertex(position, VertexRadius);
+        HashSet<string> usedLabels = new(_vertices.Select(x => x.Label));
+        int i = 0;
+        string label;
+        while (usedLabels.Contains(label = Base26.Encode(i)))
+            i++;
+        var newVertex = new Vertex(position, VertexRadius, label);
 
         // Connect the nearest linkable vertex to the new vertex, if it exists.
         Vertex? linkVertex = FindNearestLinkableVertex(position);

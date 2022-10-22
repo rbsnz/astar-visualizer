@@ -11,22 +11,21 @@ public class Vertex
     private readonly CircleShape _circle;
     private readonly Dictionary<Vertex, Edge> _edges = new();
 
+    private readonly Text _labelText = new()
+    {
+        Font = Theme.Current.Font,
+        CharacterSize = 20,
+        FillColor = new Color(0, 0, 0, 200)
+    };
+
     /// <summary>
     /// Gets or sets the position of this vertex.
     /// </summary>
     public Vector2f Position
     {
         get => _position;
-        set
-        {
-            _position = value;
-            _circle.Position = value;
-            foreach (var edge in _edges.Values)
-            {
-                edge.Update();
+        set => UpdatePosition(value);
             }
-        }
-    }
 
     /// <summary>
     /// Gets the X coordinate of this vertex.
@@ -44,6 +43,11 @@ public class Vertex
     public float Radius => _circle.Radius;
 
     /// <summary>
+    /// Gets the label for this vertex.
+    /// </summary>
+    public string Label => _labelText.DisplayedString;
+
+    /// <summary>
     /// Gets the vertices connected to this vertex.
     /// </summary>
     public IReadOnlyCollection<Vertex> Connections => _edges.Keys;
@@ -56,9 +60,8 @@ public class Vertex
     /// <summary>
     /// Constructs a new vertex with the specified position and radius.
     /// </summary>
-    public Vertex(Vector2f position, float radius)
+    public Vertex(Vector2f position, float radius, string label)
     {
-        _position = position;
         _circle = new CircleShape(radius)
         {
             Origin = new Vector2f(radius, radius),
@@ -67,6 +70,26 @@ public class Vertex
             OutlineColor = Color.Black,
             OutlineThickness = 2
         };
+
+        _labelText.DisplayedString = label;
+        var labelBounds = _labelText.GetLocalBounds();
+        _labelText.Origin = new Vector2f(
+            labelBounds.Width / 2,
+            labelBounds.Height - (_labelText.Font.GetUnderlinePosition(_labelText.CharacterSize) / 2)
+        );
+
+        Position = position;
+    }
+
+    private void UpdatePosition(Vector2f position)
+    {
+        if (_position == position) return;
+
+        _position = position;
+        _circle.Position = _position;
+        _labelText.Position = _position;
+        foreach (var edge in _edges.Values)
+            edge.Update();
     }
 
     /// <summary>
@@ -123,5 +146,6 @@ public class Vertex
     public void Draw(RenderTarget target)
     {
         target.Draw(_circle);
+        target.Draw(_labelText);
     }
 }

@@ -170,4 +170,6 @@ public class Vertex
         target.Draw(_circle);
         target.Draw(_labelText);
     }
+
+    public override string ToString() => Label;
 }

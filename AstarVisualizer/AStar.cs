@@ -56,7 +56,8 @@ public class AStar
         gScore[start] = 0;
         fScore[start] = Heuristic(start, goal);
 
-        yield return "Begin";
+        // yield return BeginSearch();
+        yield return "Beginning search";
 
         while (openSet.Count > 0)
         {
@@ -65,7 +66,8 @@ public class AStar
             openSet.Remove(current);
 
             current.State = AState.Inspecting;
-            yield return $"Inspecting vertex: {current.Label}";
+            // yield return PopVertex(current);
+            yield return $"At {current}";
 
             if (current == goal)
             {
@@ -78,7 +80,8 @@ public class AStar
                     current.State = AState.Success;
                     path.Insert(0, current);
                 }
-                yield return "Found goal.";
+                // yield return EndSearch(path);
+                yield return "Found path to goal";
                 yield break;
             }
 
@@ -96,11 +99,12 @@ public class AStar
                 Edge edge = current.GetEdge(neighbor);
                 AState previousState = edge.State;
 
-                float tentativeGscore = gScore.GetValueOrDefault(current, float.PositiveInfinity)
-                    + Maths.Distance(current.Position, neighbor.Position);
+                float gScoreNeighbor = gScore[current] + Maths.Distance(current.Position, neighbor.Position);
                 edge.State = AState.Inspecting;
-                yield return $"Tentative GScore for vertex {neighbor.Label} = {tentativeGscore:N0}";
-                if (tentativeGscore < gScore.GetValueOrDefault(neighbor, float.PositiveInfinity))
+
+                // yield return CalculateGScore(current, neighbor, gScoreNeighbor);
+                yield return $"Calculated gScore for {neighbor} = {gScoreNeighbor:N0}";
+                if (gScoreNeighbor < gScore.GetValueOrDefault(neighbor, float.PositiveInfinity))
                 {
                     // If there was already a path to this vertex, we can eliminate the previous path.
                     // This is not part of the A* algorithm, it is purely for visual representation of discarded paths.
@@ -109,27 +113,35 @@ public class AStar
                         previouslyCameFrom.GetEdge(neighbor).State = AState.Eliminated;
                         var eliminated = eliminatePath(neighbor);
                         neighbor.State = AState.Potential;
-                        yield return $"Found shorter route to vertex {neighbor.Label}, eliminated path {string.Join("->", eliminated.Select(x => x.Label))}";
+                        // yield return DiscardPath(eliminated, DiscardPathReason.ShorterRouteFound);
+                        yield return $"Discovered shorter route to {neighbor}, eliminated path {string.Join("->", eliminated)}";
                     }
 
-                    float currentFscore = tentativeGscore + Heuristic(neighbor, goal);
+                    float fScoreNeighbor = gScoreNeighbor + Heuristic(neighbor, goal);
 
                     cameFrom[neighbor] = current;
-                    gScore[neighbor] = tentativeGscore;
-                    fScore[neighbor] = currentFscore;
+                    gScore[neighbor] = gScoreNeighbor;
+                    fScore[neighbor] = fScoreNeighbor;
 
                     neighbor.State = AState.Potential;
                     edge.State = AState.Potential;
 
                     if (openSet.Add(neighbor))
                     {
-                        yield return $"Added vertex {neighbor.Label} to open set, fScore = {currentFscore:N0}";
+                        // yield return PushVertex(neighbor, fScoreNeighbor);
+                        yield return $"Added {neighbor} to open set, fScore = {fScoreNeighbor:N0}";
+                    }
+                    else
+                    {
+                        // yield return UpdateVertex(neighbor, gScoreNeighbor, fScoreNeighbor);
+                        yield return $"Updated fScore for {neighbor} = {fScoreNeighbor:N0}";
                     }
                 }
                 else
                 {
                     edge.State = AState.Eliminated;
-                    yield return $"Vertex {neighbor.Label} has a shorter route";
+                    // yield return DiscardPath(new[] { current, neighbor }, DiscardPathReason.ShorterRouteExists);
+                    yield return $"{neighbor} has a shorter route, discarding path {current}->{neighbor}";
                 }
             }
 
@@ -138,7 +150,10 @@ public class AStar
             {
                 var eliminated = eliminatePath(current);
                 if (eliminated.Count > 0)
-                    yield return $"Eliminated path: {string.Join("->", eliminated.Select(x => x.Label))}";
+                {
+                    // yield return DiscardPath(eliminated, DiscardPathReason.DeadEnd);
+                    yield return $"Dead end, eliminated path {string.Join("->", eliminated)}";
+                }
             }
             else
             {
@@ -146,6 +161,7 @@ public class AStar
             }
         }
 
+        // yield return EndSearch();
         yield return "No solution found";
     }
 }

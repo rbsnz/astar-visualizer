@@ -20,6 +20,7 @@ public sealed class Visualizer
 
     private readonly VideoMode _videoMode;
     private readonly RenderWindow _window;
+    private readonly View _view;
 
     private readonly Clock _clock = new();
 
@@ -70,6 +71,10 @@ public sealed class Visualizer
     private Vertex? _hoverVertex;
     private bool _canPlace;
 
+    private bool _isPanning;
+    private Vector2f _panOrigin;
+    private Vector2i _panFrom;
+
     private bool _isDragging;
     private Vertex? _draggingVertex;
     private Vector2f _draggingFrom;
@@ -96,6 +101,8 @@ public sealed class Visualizer
         _window.MouseButtonReleased += HandleMouseButtonReleased;
         _window.KeyPressed += HandleKeyPressed;
 
+        _view = new View(_window.DefaultView);
+
         var textBounds = _creditText.GetLocalBounds();
         _creditText.Origin = new Vector2f(0, textBounds.Height);
         _creditText.Position = new Vector2f(10, _videoMode.Height - 10);
@@ -105,7 +112,7 @@ public sealed class Visualizer
 
     private void HandleKeyPressed(object? sender, KeyEventArgs e)
     {
-        if (e.Code == Keyboard.Key.Space || e.Code == Keyboard.Key.N)
+        if (e.Code == Keyboard.Key.N)
         {
             if (_astarEnumerator is not null)
             {
@@ -349,6 +356,52 @@ public sealed class Visualizer
         _vertices.Add(newVertex);
     }
 
+    private void BeginPan(Vector2i mousePos)
+    {
+        _isPanning = true;
+        _panFrom = mousePos;
+        _panOrigin = _view.Center;
+    }
+
+    private void UpdatePan(Vector2i mousePos)
+    {
+        if (!_isPanning) return;
+
+        _view.Center = _panOrigin - (mousePos - _panFrom).ToVector2f();
+    }
+
+    private void EndPan()
+    {
+        _isPanning = false;
+
+        // Reset the view position back to the center of the graph if all vertices are outside the view.
+        if (_vertices.Count > 0)
+        {
+            FloatRect viewBounds = new(_view.Center - _view.Size / 2, _view.Size);
+            bool isInBounds = false;
+            float
+                left = float.PositiveInfinity,
+                right = float.NegativeInfinity,
+                top = float.PositiveInfinity,
+                bottom = float.NegativeInfinity;
+
+            foreach (var vertex in _vertices)
+            {
+                if (vertex.X < left) left = vertex.X;
+                if (vertex.X > right) right = vertex.X;
+                if (vertex.Y < top) top = vertex.Y;
+                if (vertex.Y > bottom) bottom = vertex.Y;
+                if (!isInBounds && viewBounds.Contains(vertex.X, vertex.Y))
+                    isInBounds = true;
+            }
+
+            if (!isInBounds)
+            {
+                _view.Center = new Vector2f(left + (right - left) / 2, top + (bottom - top) / 2);
+            }
+        }
+    }
+
     /// <summary>
     /// Begins dragging a vertex from the specified mouse position.
     /// </summary>
@@ -397,7 +450,7 @@ public sealed class Visualizer
             pos += _dragOffset;
 
         _canPlace = CanPlaceVertexAt(pos, _draggingVertex);
-            }
+    }
 
     private void UpdateHover(Vector2f mousePos)
     {
@@ -420,7 +473,15 @@ public sealed class Visualizer
     #region Events
     private void HandleMouseButtonPressed(object? sender, MouseButtonEventArgs e)
     {
-        Vector2f mousePos = new(e.X, e.Y);
+        Vector2i mousePos = new(e.X, e.Y);
+        Vector2f pos = _window.MapPixelToCoords(mousePos, _view);
+
+        if (e.Button == Mouse.Button.Left &&
+            Keyboard.IsKeyPressed(Keyboard.Key.Space))
+        {
+            BeginPan(mousePos);
+            return;
+        }
 
         if (_hoverVertex != null && e.Button == Mouse.Button.Right)
         {
@@ -482,28 +543,35 @@ public sealed class Visualizer
 
             if (_hoverVertex is not null)
             {
-                BeginDrag(_hoverVertex, mousePos);
+                BeginDrag(_hoverVertex, pos);
             }
             else if (_canPlace)
             {
-                PlaceVertex(mousePos);
-                UpdateHover(mousePos);
+                PlaceVertex(pos);
+                UpdateHover(pos);
             }
         }
     }
 
     private void HandleMouseMoved(object? sender, MouseMoveEventArgs e)
     {
-        Vector2f mousePos = new(e.X, e.Y);
+        Vector2i mousePos = new(e.X, e.Y);
+        Vector2f pos = _window.MapPixelToCoords(mousePos, _view);
+
+        if (_isPanning)
+        {
+            UpdatePan(mousePos);
+            return;
+        }
 
         if (_isDragging)
         {
-            UpdateDrag(mousePos);
+            UpdateDrag(pos);
         }
 
-        UpdateHover(mousePos);
+        UpdateHover(pos);
 
-        UpdateCanPlaceAt(mousePos);
+        UpdateCanPlaceAt(pos);
 
         if (_hoverEdge is not null)
         {
@@ -516,10 +584,10 @@ public sealed class Visualizer
 
         if (Keyboard.IsKeyPressed(Keyboard.Key.LShift) && !_isDragging)
         {
-            if (SnapPointToNearestEdge(_edges, mousePos, 10.0f, out Edge? edge, out Vector2f intersection) ||
-                SnapPointToNearestEdge(_potentialEdges, mousePos, 30.0f, out edge, out intersection))
+            if (SnapPointToNearestEdge(_edges, pos, 10.0f, out Edge? edge, out Vector2f intersection) ||
+                SnapPointToNearestEdge(_potentialEdges, pos, 30.0f, out edge, out intersection))
             {
-                float distanceMouse = Maths.Distance(mousePos, intersection);
+                float distanceMouse = Maths.Distance(pos, intersection);
                 if (distanceMouse <= VertexRadius * 2)
                 {
                     _canPlace = false;
@@ -543,14 +611,19 @@ public sealed class Visualizer
 
     private void HandleMouseButtonReleased(object? sender, MouseButtonEventArgs e)
     {
-        Vector2f mousePos = new(e.X, e.Y);
+        Vector2i mousePos = new(e.X, e.Y);
+        Vector2f pos = _window.MapPixelToCoords(mousePos, _view);
 
-        if (e.Button == Mouse.Button.Left && _isDragging)
+        if (_isPanning && e.Button == Mouse.Button.Left)
         {
-            EndDrag(mousePos);
+            EndPan();
         }
 
-        CalculatePotentialEdges();
+        if (_isDragging && e.Button == Mouse.Button.Left)
+        {
+            EndDrag(pos);
+            CalculatePotentialEdges();
+        }
     }
     #endregion
 
@@ -576,6 +649,9 @@ public sealed class Visualizer
     private void Draw()
     {
         _window.Clear(Theme.Current.Background);
+
+        // World space
+        _window.SetView(_view);
 
         if (_start is not null)
             _window.Draw(_startCircle);
@@ -616,6 +692,9 @@ public sealed class Visualizer
 
         if (_hoverVertex is not null)
             _window.Draw(_hoverCircle);
+
+        // Screen space
+        _window.SetView(_window.DefaultView);
 
         _window.Draw(_logText);
 

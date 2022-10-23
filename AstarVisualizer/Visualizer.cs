@@ -124,6 +124,17 @@ public sealed class Visualizer
                 }
             }
         }
+        else if (e.Code == Keyboard.Key.C)
+        {
+            _vertices.Clear();
+            _edges.Clear();
+            _start = null;
+            _goal = null;
+            _hoverVertex = null;
+            _hoverEdge = null;
+            _astar = null;
+            _astarEnumerator = null;
+        }
     }
 
     #region Logic

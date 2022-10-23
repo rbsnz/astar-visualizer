@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Data;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
@@ -110,41 +111,108 @@ public sealed class Visualizer
         _logText.Position = new Vector2f(10, 10);
     }
 
-    private void HandleKeyPressed(object? sender, KeyEventArgs e)
+    #region Main loop
+
+    public void Run()
     {
-        if (e.Code == Keyboard.Key.N)
+        while (_window.IsOpen)
         {
-            if (_astarEnumerator is not null)
-            {
-                if (_astarEnumerator.MoveNext())
-                {
-                    _log.Add($"{_astarEnumerator.Current}");
-                    while (_log.Count > MaxLogLines)
-                        _log.RemoveAt(0);
-                    _logText.DisplayedString = string.Join("\n", _log);
-                    Debug.WriteLine(_astarEnumerator.Current);
-                }
-                else
-                {
-                    _start = null;
-                    _goal = null;
-                }
-            }
-        }
-        else if (e.Code == Keyboard.Key.C)
-        {
-            _vertices.Clear();
-            _edges.Clear();
-            _start = null;
-            _goal = null;
-            _hoverVertex = null;
-            _hoverEdge = null;
-            _astar = null;
-            _astarEnumerator = null;
+            Update();
+            Draw();
+            ProcessEvents();
         }
     }
 
+    private void Update()
+    {
+        _hoverCircle.FillColor =
+            (_draggingVertex is not null)
+            ? (_canPlace ? Theme.Current.VertexDragging : Theme.Current.VertexDraggingInvalid)
+            : Theme.Current.VertexHover;
+    }
+
+    private void Draw()
+    {
+        _window.Clear(Theme.Current.Background);
+
+        // World space
+        _window.SetView(_view);
+
+        if (_start is not null)
+            _window.Draw(_startCircle);
+        if (_goal is not null)
+            _window.Draw(_goalCircle);
+
+        foreach (var edge in _edges.Concat(_potentialEdges))
+        {
+            if (edge.IsVisible)
+                edge.Draw(_window);
+        }
+
+        if (_hoverEdge is not null)
+        {
+            _window.Draw(new SFML.Graphics.Vertex[]
+            {
+                new(_edgeHoverPoint + new Vector2f(-5, -5)) { Color = Color.Red },
+                new(_edgeHoverPoint + new Vector2f(5, 5)) { Color = Color.Red },
+            }, PrimitiveType.LineStrip);
+            _window.Draw(new SFML.Graphics.Vertex[]
+            {
+                new(_edgeHoverPoint + new Vector2f(-5, 5)) { Color = Color.Red },
+                new(_edgeHoverPoint + new Vector2f(5, -5)) { Color = Color.Red },
+            }, PrimitiveType.LineStrip);
+        }
+
+        foreach (var vertex in _vertices)
+        {
+            if (vertex == _draggingVertex)
+                continue;
+            vertex.Draw(_window);
+        }
+
+        if (_draggingVertex is not null)
+        {
+            _draggingVertex.Draw(_window);
+        }
+
+        if (_hoverVertex is not null)
+            _window.Draw(_hoverCircle);
+
+        // Screen space
+        _window.SetView(_window.DefaultView);
+
+        _window.Draw(_logText);
+
+        _window.Draw(_creditText);
+
+        _window.Display();
+    }
+
+    private void ProcessEvents()
+    {
+        _window.DispatchEvents();
+    }
+
+    #endregion
+
     #region Logic
+    /// <summary>
+    /// Resets the state of the visualizer and clears all vertices and edges.
+    /// </summary>
+    private void Reset()
+    {
+        _vertices.Clear();
+        _edges.Clear();
+        _start = null;
+        _goal = null;
+        _hoverVertex = null;
+        _hoverEdge = null;
+        _astar = null;
+        _astarEnumerator = null;
+        _log.Clear();
+        _logText.DisplayedString = string.Empty;
+    }
+
     /// <summary>
     /// Gets the vertex at the specified point.
     /// </summary>
@@ -227,8 +295,9 @@ public sealed class Visualizer
 
                 if (!valid)
                     continue;
-                
-                _potentialEdges.Add(new Edge(vertexA, vertexB) {
+
+                _potentialEdges.Add(new Edge(vertexA, vertexB)
+                {
                     Weight = 4,
                     IsPotentialEdge = true,
                     IsVisible = false
@@ -329,11 +398,36 @@ public sealed class Visualizer
         return minVertex;
     }
 
-    private void PlaceVertex(Vector2f position)
+    private void UpdateCanPlaceAt(Vector2f pos)
+    {
+        if (_isDragging)
+            pos += _dragOffset;
+
+        _canPlace = CanPlaceVertexAt(pos, _draggingVertex);
+    }
+
+    private void UpdateHover(Vector2f pos)
+    {
+        if (_isDragging)
+        {
+            if (_draggingVertex is not null)
+            {
+                _hoverCircle.Position = _draggingVertex.Position;
+            }
+        }
+        else
+        {
+            _hoverVertex = GetVertexAtPoint(pos);
+            if (_hoverVertex is not null)
+                _hoverCircle.Position = _hoverVertex.Position;
+        }
+    }
+
+    private Vertex? PlaceVertex(Vector2f position)
     {
         // Prevent placing vertices in invalid locations.
         UpdateCanPlaceAt(position);
-        if (!_canPlace) return;
+        if (!_canPlace) return null;
 
         // Create a new vertex at the position.
         HashSet<string> usedLabels = new(_vertices.Select(x => x.Label));
@@ -357,7 +451,11 @@ public sealed class Visualizer
 
         // Update potential edges.
         CalculatePotentialEdges();
+
+        return newVertex;
     }
+
+    #region Panning
 
     private void BeginPan(Vector2i mousePos)
     {
@@ -405,6 +503,10 @@ public sealed class Visualizer
         }
     }
 
+    #endregion
+
+    #region Dragging
+
     /// <summary>
     /// Begins dragging a vertex from the specified mouse position.
     /// </summary>
@@ -447,33 +549,12 @@ public sealed class Visualizer
         UpdateHover(mousePos);
     }
 
-    private void UpdateCanPlaceAt(Vector2f pos)
-    {
-        if (_isDragging)
-            pos += _dragOffset;
+    #endregion
 
-        _canPlace = CanPlaceVertexAt(pos, _draggingVertex);
-    }
-
-    private void UpdateHover(Vector2f mousePos)
-    {
-        if (_isDragging)
-        {
-            if (_draggingVertex is not null)
-            {
-                _hoverCircle.Position = _draggingVertex.Position;
-            }
-        }
-        else
-        {
-            _hoverVertex = GetVertexAtPoint(mousePos);
-            if (_hoverVertex is not null)
-                _hoverCircle.Position = _hoverVertex.Position;
-        }
-    }
     #endregion
 
     #region Events
+
     private void HandleMouseButtonPressed(object? sender, MouseButtonEventArgs e)
     {
         Vector2i mousePos = new(e.X, e.Y);
@@ -628,87 +709,66 @@ public sealed class Visualizer
             CalculatePotentialEdges();
         }
     }
+
+    private void HandleKeyPressed(object? sender, KeyEventArgs e)
+    {
+        if (e.Code == Keyboard.Key.N)
+        {
+            if (_astarEnumerator is not null)
+            {
+                if (_astarEnumerator.MoveNext())
+                {
+                    _log.Add($"{_astarEnumerator.Current}");
+                    while (_log.Count > MaxLogLines)
+                        _log.RemoveAt(0);
+                    _logText.DisplayedString = string.Join("\n", _log);
+                    Debug.WriteLine(_astarEnumerator.Current);
+                }
+                else
+                {
+                    _start = null;
+                    _goal = null;
+
+                    foreach (var vertex in _vertices)
+                        vertex.State = AState.None;
+                    foreach (var edge in _edges)
+                        edge.State = AState.None;
+                }
+            }
+        }
+        else if (e.Code == Keyboard.Key.C)
+        {
+            Reset();
+        }
+        else if (e.Code == Keyboard.Key.R)
+        {
+            Reset();
+
+            float left = _view.Center.X - (_view.Size.X / 2) + VertexRadius * 2;
+            float top = _view.Center.Y - (_view.Size.Y / 2) + VertexRadius * 2;
+            float width = _view.Size.X - VertexRadius * 4;
+            float height = _view.Size.Y - VertexRadius * 4;
+
+            while (_vertices.Count < 52)
+            {
+                PlaceVertex(new Vector2f(
+                    left + (float)(Random.Shared.NextDouble() * width),
+                    top + (float)(Random.Shared.NextDouble() * height)
+                ));
+            }
+
+            CalculatePotentialEdges();
+            foreach (var edge in _potentialEdges)
+            {
+                if (Random.Shared.NextDouble() < 0.05)
+                {
+                    if (edge.A.Connect(edge.B, out Edge? ee))
+                        _edges.Add(ee);
+                }
+            }
+        }
+    }
+
     #endregion
 
-    #region Main loop
-    public void Run()
-    {
-        while (_window.IsOpen)
-        {
-            Update();
-            Draw();
-            ProcessEvents();
-        }
-    }
-
-    private void Update()
-    {
-        _hoverCircle.FillColor =
-            (_draggingVertex is not null)
-            ? (_canPlace ? Theme.Current.VertexDragging : Theme.Current.VertexDraggingInvalid)
-            : Theme.Current.VertexHover;
-    }
-
-    private void Draw()
-    {
-        _window.Clear(Theme.Current.Background);
-
-        // World space
-        _window.SetView(_view);
-
-        if (_start is not null)
-            _window.Draw(_startCircle);
-        if (_goal is not null)
-            _window.Draw(_goalCircle);
-
-        foreach (var edge in _edges.Concat(_potentialEdges))
-        {
-            if (edge.IsVisible)
-                edge.Draw(_window);
-        }
-
-        if (_hoverEdge is not null)
-        {
-            _window.Draw(new SFML.Graphics.Vertex[]
-            {
-                new(_edgeHoverPoint + new Vector2f(-5, -5)) { Color = Color.Red },
-                new(_edgeHoverPoint + new Vector2f(5, 5)) { Color = Color.Red },
-            }, PrimitiveType.LineStrip);
-            _window.Draw(new SFML.Graphics.Vertex[]
-            {
-                new(_edgeHoverPoint + new Vector2f(-5, 5)) { Color = Color.Red },
-                new(_edgeHoverPoint + new Vector2f(5, -5)) { Color = Color.Red },
-            }, PrimitiveType.LineStrip);
-        }
-
-        foreach (var vertex in _vertices)
-        {
-            if (vertex == _draggingVertex)
-                continue;
-            vertex.Draw(_window);
-        }
-
-        if (_draggingVertex is not null)
-        {
-            _draggingVertex.Draw(_window);
-        }
-
-        if (_hoverVertex is not null)
-            _window.Draw(_hoverCircle);
-
-        // Screen space
-        _window.SetView(_window.DefaultView);
-
-        _window.Draw(_logText);
-
-        _window.Draw(_creditText);
-
-        _window.Display();
-    }
-
-    private void ProcessEvents()
-    {
-        _window.DispatchEvents();
-    }
-    #endregion
 }

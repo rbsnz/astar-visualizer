@@ -1,4 +1,9 @@
-﻿using SFML.System;
+﻿/*
+ * References:
+ * https://en.wikipedia.org/wiki/Line%2dline_intersection#Given_two_points_on_each_line_segment
+ */
+
+using SFML.System;
 
 namespace AstarVisualizer;
 
@@ -49,12 +54,15 @@ public struct Line
         : this(new Vector2f(x1, y1), new Vector2f(x2, y2))
     { }
 
+    /// <inheritdoc cref="Intersects(Line, Line, out Vector2f)" />
+    /// <param name="other"></param>
+    /// <param name="intersection"></param>
+    /// <returns></returns>
+    public bool Intersects(Line other, out Vector2f intersection) => Line.Intersects(this, other, out intersection);
+
     /// <summary>
     /// Calculates the point at which two line segments intersect.
     /// </summary>
-    /// <remarks>
-    /// Reference: <see href="https://en.wikipedia.org/wiki/Line–line_intersection#Given_two_points_on_each_line_segment"/>
-    /// </remarks>
     /// <param name="lineA">The first line.</param>
     /// <param name="lineB">The second line.</param>
     /// <param name="intersection">

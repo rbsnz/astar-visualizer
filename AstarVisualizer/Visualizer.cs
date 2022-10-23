@@ -155,6 +155,42 @@ public sealed class Visualizer
     }
 
     /// <summary>
+    /// Checks if a vertex can be placed or moved to the specified point.
+    /// </summary>
+    /// <param name="point">The point to check if a vertex can be placed at or moved to.</param>
+    /// <param name="dragVertex">The vertex being dragged, or null if placing a new vertex.</param>
+    /// <returns>Whether a vertex can be placed at/moved to the specified location.</returns>
+    private bool CanPlaceVertexAt(Vector2f point, Vertex? dragVertex)
+    {
+        // Check each vertex and return false if the point is too close.
+        foreach (Vertex vertex in _vertices)
+        {
+            if (vertex == dragVertex)
+                continue;
+            if (Maths.Distance(vertex.Position, point) <= vertex.Radius * 3)
+                return false;
+        }
+
+        // Check each edge and return false if the point is too close to the line.
+        foreach (Edge edge in _edges)
+        {
+            // Ignore this edge if it is connected to the drag vertex.
+            if (dragVertex is not null && edge.IsConnectedTo(dragVertex))
+                continue;
+            // TODO: circle/line collision detection
+            Line edgeLine = edge.Line;
+            float angle = edgeLine.Angle;
+            float rightAngle = angle + MathF.PI / 4;
+            Vector2f offset = new(MathF.Cos(rightAngle) * VertexRadius * 3, MathF.Sin(rightAngle) * VertexRadius * 3);
+            Line placementLine = new(point + offset, point - offset);
+            if (Line.Intersects(edgeLine, placementLine, out _))
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Calculates potential edges between nodes that do not intersect with any existing edges.
     /// </summary>
     private void CalculatePotentialEdges()
@@ -316,11 +352,11 @@ public sealed class Visualizer
     /// <summary>
     /// Begins dragging a vertex from the specified mouse position.
     /// </summary>
-    private void BeginDrag(Vertex vertex, Vector2f mousePos)
+    private void BeginDrag(Vertex vertex, Vector2f pos)
     {
         _draggingVertex = vertex;
         _draggingFrom = vertex.Position;
-        _dragOffset = vertex.Position - mousePos;
+        _dragOffset = vertex.Position - pos;
         _canPlace = true;
         _isDragging = true;
     }
@@ -357,25 +393,11 @@ public sealed class Visualizer
 
     private void UpdateCanPlaceAt(Vector2f pos)
     {
-        _canPlace = true;
-
         if (_isDragging)
             pos += _dragOffset;
 
-        foreach (var vertex in _vertices)
-        {
-            if (vertex == _draggingVertex)
-                continue;
-
-            if (Maths.Distance(vertex.Position, pos) < VertexRadius * 3)
-            {
-                _canPlace = false;
-                break;
+        _canPlace = CanPlaceVertexAt(pos, _draggingVertex);
             }
-        }
-
-        // TODO: Check edge collisions.
-    }
 
     private void UpdateHover(Vector2f mousePos)
     {

@@ -354,6 +354,9 @@ public sealed class Visualizer
 
         // Add the new vertex.
         _vertices.Add(newVertex);
+
+        // Update potential edges.
+        CalculatePotentialEdges();
     }
 
     private void BeginPan(Vector2i mousePos)

@@ -88,6 +88,7 @@ public sealed class Visualizer
 
     private AStar? _astar;
     private IEnumerator? _astarEnumerator;
+    private bool _canStep = true;
 
     public Visualizer()
     {
@@ -101,6 +102,7 @@ public sealed class Visualizer
         _window.MouseButtonPressed += HandleMouseButtonPressed;
         _window.MouseButtonReleased += HandleMouseButtonReleased;
         _window.KeyPressed += HandleKeyPressed;
+        _window.KeyReleased += HandleKeyReleased;
 
         _view = new View(_window.DefaultView);
 
@@ -714,7 +716,7 @@ public sealed class Visualizer
     {
         if (e.Code == Keyboard.Key.N)
         {
-            if (_astarEnumerator is not null)
+            if (_astarEnumerator is not null && _canStep)
             {
                 if (_astarEnumerator.MoveNext())
                 {
@@ -723,11 +725,18 @@ public sealed class Visualizer
                         _log.RemoveAt(0);
                     _logText.DisplayedString = string.Join("\n", _log);
                     Debug.WriteLine(_astarEnumerator.Current);
+
+                    if ((string)_astarEnumerator.Current == "Found path to goal")
+                    {
+                        _canStep = false;
+                    }
                 }
                 else
                 {
                     _start = null;
                     _goal = null;
+                    _log.Clear();
+                    _logText.DisplayedString = string.Empty;
 
                     foreach (var vertex in _vertices)
                         vertex.State = AState.None;
@@ -766,6 +775,14 @@ public sealed class Visualizer
                         _edges.Add(ee);
                 }
             }
+        }
+    }
+
+    private void HandleKeyReleased(object? sender, KeyEventArgs e)
+    {
+        if (e.Code == Keyboard.Key.N)
+        {
+            _canStep = true;
         }
     }
 

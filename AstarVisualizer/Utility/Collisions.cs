@@ -8,7 +8,7 @@ using SFML.System;
 namespace AstarVisualizer;
 
 /// <summary>
-/// A helper class for detecting collisions.
+/// A utility class for detecting collisions.
 /// </summary>
 public static class Collisions
 {

@@ -5,6 +5,9 @@ using SFML.System;
 
 namespace AstarVisualizer;
 
+/// <summary>
+/// Represents a vertex in a graph.
+/// </summary>
 public class Vertex
 {
     private Vector2f _position;
@@ -92,15 +95,14 @@ public class Vertex
         };
 
         _labelText.DisplayedString = label;
-        var labelBounds = _labelText.GetLocalBounds();
-        _labelText.Origin = new Vector2f(
-            labelBounds.Width / 2,
-            labelBounds.Height - (_labelText.Font.GetUnderlinePosition(_labelText.CharacterSize) / 2)
-        );
+        _labelText.Center();
 
         Position = position;
     }
 
+    /// <summary>
+    /// Updates the position of this vertex and its geometry.
+    /// </summary>
     private void UpdatePosition(Vector2f position)
     {
         if (_position == position) return;

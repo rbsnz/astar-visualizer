@@ -834,54 +834,54 @@ public sealed class Visualizer
         {
             if (Keyboard.IsKeyPressed(Keyboard.Key.LShift))
             {
-            // If an edge is being hovered over
-            if (_hoverEdge is not null)
-            {
-                // Attempt to create the edge if it is a potential edge
-                if (_hoverEdge.IsPotentialEdge)
+                // If an edge is being hovered over
+                if (_hoverEdge is not null)
                 {
-                    if (_hoverEdge.A.Connect(_hoverEdge.B, out Edge? newEdge))
+                    // Attempt to create the edge if it is a potential edge
+                    if (_hoverEdge.IsPotentialEdge)
                     {
-                        _edges.Add(newEdge);
-                        _hoverEdge = null;
-                        CalculatePotentialEdges();
-                        return;
+                        if (_hoverEdge.A.Connect(_hoverEdge.B, out Edge? newEdge))
+                        {
+                            _edges.Add(newEdge);
+                            _hoverEdge = null;
+                            CalculatePotentialEdges();
+                            return;
+                        }
+                    }
+                    // Otherwise attempt to delete the existing edge
+                    else
+                    {
+                        if (_hoverEdge.A.Disconnect(_hoverEdge.B, out _))
+                        {
+                            _edges.Remove(_hoverEdge);
+                            if (_hoverEdge.A.Connections.Count == 0)
+                                _vertices.Remove(_hoverEdge.A);
+                            if (_hoverEdge.B.Connections.Count == 0)
+                                _vertices.Remove(_hoverEdge.B);
+                            _hoverEdge = null;
+
+                            CalculatePotentialEdges();
+                            return;
+                        }
+
                     }
                 }
-                // Otherwise attempt to delete the existing edge
-                else
-                {
-                    if (_hoverEdge.A.Disconnect(_hoverEdge.B, out _))
-                    {
-                        _edges.Remove(_hoverEdge);
-                        if (_hoverEdge.A.Connections.Count == 0)
-                            _vertices.Remove(_hoverEdge.A);
-                        if (_hoverEdge.B.Connections.Count == 0)
-                            _vertices.Remove(_hoverEdge.B);
-                        _hoverEdge = null;
-
-                        CalculatePotentialEdges();
-                        return;
-                    }
-
-                }
-            }
             }
             else
             {
-            // Begin dragging if a vertex is being hovered over
-            if (_hoverVertex is not null)
-            {
-                BeginDrag(_hoverVertex, pos);
-            }
-            // Otherwise attempt to place a vertex at the mouse position
-            else if (_canPlace)
-            {
-                PlaceVertex(pos);
-                UpdateHover(pos);
+                // Begin dragging if a vertex is being hovered over
+                if (_hoverVertex is not null)
+                {
+                    BeginDrag(_hoverVertex, pos);
+                }
+                // Otherwise attempt to place a vertex at the mouse position
+                else if (_canPlace)
+                {
+                    PlaceVertex(pos);
+                    UpdateHover(pos);
+                }
             }
         }
-    }
     }
 
     private void HandleMouseMoved(object? sender, MouseMoveEventArgs e)

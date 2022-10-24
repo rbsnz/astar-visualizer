@@ -2,12 +2,16 @@
 
 namespace AstarVisualizer;
 
+/// <summary>
+/// A utility class to convert an integer to a string using Base26 encoding.
+/// Used to generate labels for vertices.
+/// </summary>
 public static class Base26
 {
-    private static readonly char[] Charset = Enumerable.Range(0, 26)
-        .Select(i => (char)('A' + i))
-        .ToArray();
-
+    /// <summary>
+    /// Encodes the specified integer to a base-26 string.
+    /// </summary>
+    /// <exception cref="ArgumentException">If the specified value is negative.</exception>
     public static string Encode(int i)
     {
         if (i < 0)
@@ -16,7 +20,7 @@ public static class Base26
         StringBuilder sb = new();
         while (i >= 0)
         {
-            sb.Insert(0, Charset[i % 26]);
+            sb.Insert(0, (char)('A' + (i % 26)));
             i = i / 26 - 1;
         }
         return sb.ToString();

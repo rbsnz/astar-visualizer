@@ -2,6 +2,9 @@
 
 namespace AstarVisualizer;
 
+/// <summary>
+/// Represents an edge in a graph.
+/// </summary>
 public class Edge
 {
     private readonly LineShape _lineShape = new() { Weight = 6 };
@@ -94,7 +97,7 @@ public class Edge
     }
 
     /// <summary>
-    /// Updates the geometry for this edge.
+    /// Updates the geometry of this edge.
     /// </summary>
     public void Update()
     {

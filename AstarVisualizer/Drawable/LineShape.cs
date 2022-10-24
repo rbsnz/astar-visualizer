@@ -3,6 +3,9 @@ using SFML.System;
 
 namespace AstarVisualizer;
 
+/// <summary>
+/// Represents a line with a weight.
+/// </summary>
 public class LineShape : RectangleShape
 {
     private float _weight;

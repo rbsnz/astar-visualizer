@@ -32,6 +32,9 @@ public sealed class Visualizer
     private readonly List<string> _log = new();
     private const int MaxLogLines = 10;
 
+    private readonly HelpPanel _helpPanel = new();
+    private bool _showHelp = true;
+
     private readonly Text _creditText = new()
     {
         Font = Theme.Current.Font,
@@ -224,6 +227,9 @@ public sealed class Visualizer
         }
 
         _window.Draw(_creditText);
+
+        if (_showHelp)
+            _window.Draw(_helpPanel);
 
         _window.Display();
     }
@@ -981,6 +987,7 @@ public sealed class Visualizer
     {
         switch (e.Code)
         {
+            case Keyboard.Key.F1: _showHelp = !_showHelp; break;
             case Keyboard.Key.C: Clear(); break;
             case Keyboard.Key.X: Reset(); break;
             case Keyboard.Key.R: GenerateRandomGraph(); break;

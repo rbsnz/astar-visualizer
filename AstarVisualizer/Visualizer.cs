@@ -239,6 +239,8 @@ public sealed class Visualizer
     /// </summary>
     private void Clear()
     {
+        if (_isDragging) return;
+
         _vertices.Clear();
         _edges.Clear();
         _hoverVertex = null;
@@ -251,6 +253,8 @@ public sealed class Visualizer
     /// </summary>
     private void Reset()
     {
+        if (_isDragging) return;
+
         _start = _goal = null;
         _astar = null;
         _log.Clear();
@@ -267,6 +271,8 @@ public sealed class Visualizer
     /// </summary>
     private void GenerateRandomGraph()
     {
+        if (_isDragging) return;
+
         Clear();
 
         float padding = VertexRadius * 8;
@@ -774,8 +780,10 @@ public sealed class Visualizer
             return;
         }
 
-        if (_hoverVertex != null && e.Button == Mouse.Button.Right)
+        if (e.Button == Mouse.Button.Right)
         {
+            if (_hoverVertex is null || _isDragging) return;
+
             if (_goal is null)
             {
                 if (_start is null)

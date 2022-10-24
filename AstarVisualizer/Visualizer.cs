@@ -827,6 +827,7 @@ public sealed class Visualizer
                 _logText.DisplayedString = "";
 
                 _astar = new AStar(_vertices, Heuristics.Euclidean, _start, _goal);
+                Step();
             }
         }
 

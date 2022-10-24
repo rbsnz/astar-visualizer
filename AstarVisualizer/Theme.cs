@@ -6,6 +6,9 @@ using AstarVisualizer.Serialization;
 
 namespace AstarVisualizer;
 
+/// <summary>
+/// Provides a color theme for the visualizer.
+/// </summary>
 public class Theme
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -19,9 +22,13 @@ public class Theme
         }
     };
 
+    /// <summary>
+    /// Gets or sets the current theme.
+    /// </summary>
     public static Theme Current { get; set; } = Load(@"res\theme\default.json");
 
     public Font Font { get; set; } = null!;
+
     public Color Background { get; set; }
     public Color VertexFill { get; set; }
     public Color EdgeFill { get; set; }
@@ -40,12 +47,19 @@ public class Theme
     public Color VertexEliminated { get; set; }
     public Color VertexSuccess { get; set; }
 
+    public Color EdgeStateInvalid { get; set; }
     public Color EdgeStateUnvisited { get; set; }
     public Color EdgeStatePotential { get; set; }
     public Color EdgeStateInspecting { get; set; }
     public Color EdgeStateEliminated { get; set; }
     public Color EdgeStateSuccess { get; set; }
 
+    /// <summary>
+    /// Loads a theme from the specified JSON file path.
+    /// </summary>
+    /// <param name="path">The path to the JSON theme file.</param>
+    /// <returns>The resulting theme.</returns>
+    /// <exception cref="JsonException">If the theme was unable to be deserialized.</exception>
     public static Theme Load(string path)
     {
         string json = File.ReadAllText(path);

@@ -156,9 +156,15 @@ public sealed class Visualizer
 
         foreach (var edge in _edges.Concat(_potentialEdges))
         {
+            if (_draggingVertex is not null && edge.IsIncidentTo(_draggingVertex)) continue;
+
             if (edge.IsVisible)
                 edge.Draw(_window);
         }
+
+        if (_draggingVertex is not null)
+            foreach (var edge in _draggingVertex.Edges)
+                edge.Draw(_window);
 
         if (_hoverEdge is not null)
         {
@@ -419,32 +425,45 @@ public sealed class Visualizer
     /// <returns>Whether a vertex can be placed at/moved to the specified location.</returns>
     private bool CanPlaceVertexAt(Vector2f point, Vertex? dragVertex)
     {
+        bool isValidPlacement = true;
+        Circle placementCircle = new(point, VertexRadius * 2.5f);
+
+        if (dragVertex is not null)
+        {
+            // Check edge collisions.
+            foreach (var edge in dragVertex.Edges)
+            {
+                edge.State = AState.None;
+
+                if (_vertices.Any(vertex => !edge.IsIncidentTo(vertex) && edge.Intersects(vertex, vertex.Radius * 2.5f)) ||
+                    _edges.Any(edgeOther => !edgeOther.IsIncidentTo(edge) && edge.Intersects(edgeOther)))
+                {
+                    isValidPlacement = false;
+                    edge.State = AState.Invalid;
+                }
+            }
+        }
+
+        if (!isValidPlacement) return false;
+
         // Check each vertex and return false if the point is too close.
         foreach (Vertex vertex in _vertices)
         {
             if (vertex == dragVertex)
                 continue;
-            if (Maths.Distance(vertex.Position, point) <= vertex.Radius * 3)
-                return false;
+            if (vertex.Intersects(placementCircle)) return false;
         }
 
         // Check each edge and return false if the point is too close to the line.
         foreach (Edge edge in _edges)
         {
             // Ignore this edge if it is connected to the drag vertex.
-            if (dragVertex is not null && edge.IsConnectedTo(dragVertex))
+            if (dragVertex is not null && edge.IsIncidentTo(dragVertex))
                 continue;
-            // TODO: circle/line collision detection
-            Line edgeLine = edge.Line;
-            float angle = edgeLine.Angle;
-            float rightAngle = angle + MathF.PI / 4;
-            Vector2f offset = new(MathF.Cos(rightAngle) * VertexRadius * 3, MathF.Sin(rightAngle) * VertexRadius * 3);
-            Line placementLine = new(point + offset, point - offset);
-            if (Line.Intersects(edgeLine, placementLine, out _))
-                return false;
+            if (edge.Intersects(placementCircle)) return false;
         }
 
-        return true;
+        return isValidPlacement;
     }
 
     /// <summary>
@@ -460,15 +479,15 @@ public sealed class Visualizer
             {
                 var vertexA = _vertices[i];
                 var vertexB = _vertices[j];
-                if (vertexA.IsConnectedTo(vertexB))
+                if (vertexA.IsAdjacentTo(vertexB))
                     continue;
 
                 bool valid = true;
                 foreach (var edge in _edges)
                 {
-                    if (edge.IsConnectedTo(vertexA) || edge.IsConnectedTo(vertexB)) continue;
+                    if (edge.IsIncidentTo(vertexA) || edge.IsIncidentTo(vertexB)) continue;
 
-                    if (Line.Intersects(edge.Line, new Line(vertexA.Position, vertexB.Position), out _))
+                    if (edge.Line.Intersects(new Line(vertexA.Position, vertexB.Position), out _))
                     {
                         valid = false;
                         break;
@@ -518,7 +537,7 @@ public sealed class Visualizer
             );
 
             // Check if the lines intersect.
-            if (Line.Intersects(edgeLine, pointLine, out Vector2f p))
+            if (edgeLine.Intersects(pointLine, out Vector2f p))
             {
                 // Update the current edge if this is the nearest to the specified point.
                 float distance = Maths.Distance(point, p);
@@ -559,7 +578,7 @@ public sealed class Visualizer
                 if (edge.A == vertex || edge.B == vertex)
                     continue;
 
-                if (Line.Intersects(line, edge.Line, out _))
+                if (line.Intersects(edge.Line, out _))
                 {
                     valid = false;
                     continue;
@@ -724,6 +743,9 @@ public sealed class Visualizer
             // Revert the vertex position back to where it was dragged from if it cannot be placed here.
             if (!_canPlace)
                 _draggingVertex.Position = _draggingFrom;
+
+            foreach (var edge in _draggingVertex.Edges)
+                edge.State = AState.None;
 
             _draggingVertex = null;
         }

@@ -20,7 +20,12 @@ public class Edge
     /// <summary>
     /// Gets if this edge is connected to the specified vertex.
     /// </summary>
-    public bool IsConnectedTo(Vertex vertex) => vertex == A || vertex == B;
+    public bool IsIncidentTo(Vertex vertex) => vertex == A || vertex == B;
+
+    /// <summary>
+    /// Gets if this edge shares a common vertex with another edge.
+    /// </summary>
+    public bool IsIncidentTo(Edge edge) => edge.IsIncidentTo(A) || edge.IsIncidentTo(B);
 
     /// <summary>
     /// Gets a line that represents this edge.
@@ -64,8 +69,9 @@ public class Edge
             _state = value;
             Color = _state switch
             {
-                AState.Unvisited => Theme.Current.EdgeStateUnvisited,
                 AState.None => Theme.Current.EdgeFill,
+                AState.Invalid => Theme.Current.EdgeStateInvalid,
+                AState.Unvisited => Theme.Current.EdgeStateUnvisited,
                 AState.Potential => Theme.Current.EdgeStatePotential,
                 AState.Inspecting => Theme.Current.EdgeStateInspecting,
                 AState.Eliminated => Theme.Current.EdgeStateEliminated,

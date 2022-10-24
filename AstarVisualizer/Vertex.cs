@@ -112,19 +112,21 @@ public class Vertex
             edge.Update();
     }
 
-    public Edge GetEdge(Vertex other) => _edges[other];
+    /// <summary>
+    /// Gets if this vertex is connected to another vertex.
+    /// </summary>
+    public bool IsAdjacentTo(Vertex other) => _edges.ContainsKey(other);
 
     /// <summary>
-    /// Gets if this vertex belongs to the specified edge.
+    /// Gets the edge that connects this vertex to the specified vertex.
     /// </summary>
-    public bool BelongsTo(Edge edge) => (this == edge.A) || (this == edge.B);
+    public Edge GetEdge(Vertex other) => _edges[other];
 
     /// <summary>
     /// Connects this vertex to another vertex and produces an edge.
     /// </summary>
-    /// <param name="other"></param>
-    /// <param name="edge">
-    /// </param>
+    /// <param name="other">The vertex to connect this vertex to.</param>
+    /// <param name="edge">When the method returns, contains the new edge that connects the two vertices, if it was successfully created.</param>
     /// <returns><see langword="true"/> if the connection was created, or <see langword="false"/> if it already exists.</returns>
     public bool Connect(Vertex other, [NotNullWhen(true)] out Edge? edge)
     {
@@ -139,11 +141,6 @@ public class Vertex
 
         return true;
     }
-
-    /// <summary>
-    /// Gets if this vertex is connected to another vertex.
-    /// </summary>
-    public bool IsConnectedTo(Vertex other) => _edges.ContainsKey(other);
 
     /// <summary>
     /// Disconnects this vertex from another vertex.

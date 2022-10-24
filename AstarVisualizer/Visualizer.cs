@@ -259,6 +259,8 @@ public sealed class Visualizer
         _edges.Clear();
         _hoverVertex = null;
         _hoverEdge = null;
+        _edgeSelectionVertex = null;
+        _potentialEdges.Clear();
         Reset();
     }
 
@@ -830,6 +832,8 @@ public sealed class Visualizer
 
         if (e.Button == Mouse.Button.Left)
         {
+            if (Keyboard.IsKeyPressed(Keyboard.Key.LShift))
+            {
             // If an edge is being hovered over
             if (_hoverEdge is not null)
             {
@@ -862,7 +866,9 @@ public sealed class Visualizer
 
                 }
             }
-
+            }
+            else
+            {
             // Begin dragging if a vertex is being hovered over
             if (_hoverVertex is not null)
             {
@@ -875,6 +881,7 @@ public sealed class Visualizer
                 UpdateHover(pos);
             }
         }
+    }
     }
 
     private void HandleMouseMoved(object? sender, MouseMoveEventArgs e)

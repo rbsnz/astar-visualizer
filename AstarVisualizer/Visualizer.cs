@@ -87,7 +87,6 @@ public sealed class Visualizer
     private Vertex? _start, _goal;
 
     private AStar? _astar;
-    private IEnumerator<AStep>? _astarEnumerator;
     private bool _canStep = true;
 
     public Visualizer()
@@ -210,7 +209,6 @@ public sealed class Visualizer
         _hoverVertex = null;
         _hoverEdge = null;
         _astar = null;
-        _astarEnumerator = null;
         _log.Clear();
         _logText.DisplayedString = string.Empty;
     }
@@ -590,8 +588,7 @@ public sealed class Visualizer
                 _log.Clear();
                 _logText.DisplayedString = "";
 
-                _astar = new AStar(_vertices, Heuristics.Euclidean);
-                _astarEnumerator = _astar.Search(_start, _goal).GetEnumerator();
+                _astar = new AStar(_vertices, Heuristics.Euclidean, _start, _goal);
             }
         }
 
@@ -724,11 +721,11 @@ public sealed class Visualizer
     {
         if (e.Code == Keyboard.Key.N)
         {
-            if (_astarEnumerator is not null && _canStep)
+            if (_astar is not null && _canStep)
             {
-                if (_astarEnumerator.MoveNext())
+                if (_astar.Step())
                 {
-                    switch (_astarEnumerator.Current)
+                    switch (_astar.CurrentStep)
                     {
                         case BeginSearch:
                             Log("Beginning search");

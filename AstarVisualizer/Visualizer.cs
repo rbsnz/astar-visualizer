@@ -315,18 +315,7 @@ public sealed class Visualizer
 
         if (!_astar.Step())
         {
-            _start = null;
-            _goal = null;
-            _log.Clear();
-            _logText.DisplayedString = string.Empty;
-
-            foreach (var vertex in _vertices)
-                vertex.State = AState.None;
-            foreach (var edge in _edges)
-                edge.State = AState.None;
-
-            _openVertices.Clear();
-
+            Reset();
             return;
         }
 
@@ -713,6 +702,9 @@ public sealed class Visualizer
     /// </summary>
     private void BeginDrag(Vertex vertex, Vector2f pos)
     {
+        if (_astar is not null)
+            return;
+
         _draggingVertex = vertex;
         _draggingFrom = vertex.Position;
         _dragOffset = vertex.Position - pos;
@@ -729,6 +721,11 @@ public sealed class Visualizer
 
         _draggingVertex.Position = mousePos + _dragOffset;
         _hoverCircle.Position = _draggingVertex.Position;
+
+        if (_draggingVertex == _start)
+            _startCircle.Position = _draggingVertex.Position;
+        if (_draggingVertex == _goal)
+            _goalCircle.Position = _draggingVertex.Position;
     }
 
     /// <summary>
@@ -742,7 +739,13 @@ public sealed class Visualizer
         {
             // Revert the vertex position back to where it was dragged from if it cannot be placed here.
             if (!_canPlace)
+            {
                 _draggingVertex.Position = _draggingFrom;
+                if (_draggingVertex == _start)
+                    _startCircle.Position = _draggingVertex.Position;
+                if (_draggingVertex == _goal)
+                    _goalCircle.Position = _draggingVertex.Position;
+            }
 
             foreach (var edge in _draggingVertex.Edges)
                 edge.State = AState.None;

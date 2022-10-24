@@ -19,19 +19,20 @@ public class AStar
 
     public IEnumerable<AStep> Search(Vertex start, Vertex goal)
     {
+        // Reset the state of all vertices and edges.
         foreach (var vertex in _vertices)
             vertex.State = AState.Unvisited;
         foreach (var edge in _edges)
             edge.State = AState.Unvisited;
 
-        HashSet<Vertex> openSet = new() { start };
+        PriorityQueue<Vertex, float> openSet = new();
         HashSet<Vertex> visited = new();
 
         Dictionary<Vertex, Vertex> cameFrom = new();
         Dictionary<Vertex, float> gScore = new();
         Dictionary<Vertex, float> fScore = new();
 
-        // Traverses the path back from the specified vertex and eliminates dead edges.
+        // Traverses the path back from the specified vertex and eliminates vertices with no potential paths.
         LinkedList<Vertex> eliminatePath(Vertex current)
         {
             LinkedList<Vertex> eliminated = new();
@@ -41,29 +42,42 @@ public class AStar
             {
                 var previous = cameFrom[current];
                 eliminated.AddFirst(current);
+                // Mark the vertex and the edge to the previous vertex as eliminated.
                 current.State = AState.Eliminated;
                 current.GetEdge(previous).State = AState.Eliminated;
+                // Move to the previous vertex.
                 current = previous;
 
-                // Vertices are only eliminated if they have <= 1 open paths.
+                // Vertices are only eliminated if they have <= 1 open paths - the path to the next vertex that was eliminated.
                 if (current.Edges.Count(x => x.State != AState.Eliminated) > 1)
                     break;
             }
+
+            // Add the root vertex to the eliminated path.
             eliminated.AddFirst(current);
+
+            // Mark the root vertex as eliminated if all its paths have been eliminated.
+            if (current.Edges.All(x => x.State == AState.Eliminated))
+                current.State = AState.Eliminated;
+
+            // Return the path of vertices that were eliminated.
             return eliminated;
         }
 
         gScore[start] = 0;
         fScore[start] = Heuristic(start, goal);
+        openSet.Enqueue(start, 0);
 
         yield return new BeginSearch();
 
         while (openSet.Count > 0)
         {
-            Vertex? current = openSet.MinBy(x => fScore[x]);
-            if (current is null) break;
-            openSet.Remove(current);
-            visited.Add(current);
+            // Take the vertex with the lowest fScore.
+            Vertex current = openSet.Dequeue();
+
+            // Skip the vertex if it has already been visited.
+            if (!visited.Add(current))
+                continue;
 
             current.State = AState.Inspecting;
             yield return new VisitVertex(current);
@@ -84,7 +98,6 @@ public class AStar
                 yield break;
             }
 
-            cameFrom.TryGetValue(current, out Vertex? cameFromCurrent);
             foreach (Vertex neighbor in current.Connections)
             {
                 // Skip the vertex if it has already been visited.
@@ -105,9 +118,7 @@ public class AStar
                     // This is not part of the A* algorithm, it is purely for visual representation of discarded paths.
                     if (previouslyCameFrom is not null)
                     {
-                        previouslyCameFrom.GetEdge(neighbor).State = AState.Eliminated;
                         var eliminated = eliminatePath(neighbor);
-                        neighbor.State = AState.Potential;
                         yield return new DiscardPath(current, neighbor, DiscardPathReason.ShorterRouteFound, eliminated);
                     }
 
@@ -117,10 +128,12 @@ public class AStar
                     gScore[neighbor] = gScoreNeighbor;
                     fScore[neighbor] = fScoreNeighbor;
 
-                    neighbor.State = AState.Potential;
                     edge.State = AState.Potential;
+                    neighbor.State = AState.Potential;
 
-                    if (openSet.Add(neighbor))
+                    openSet.Enqueue(neighbor, fScoreNeighbor);
+
+                    if (previouslyCameFrom is null)
                         yield return new OpenVertex(neighbor, gScoreNeighbor, fScoreNeighbor);
                     else
                         yield return new UpdateVertex(neighbor, gScoreNeighbor, fScoreNeighbor);

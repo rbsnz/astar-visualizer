@@ -87,7 +87,7 @@ public sealed class Visualizer
     private Vertex? _start, _goal;
 
     private AStar? _astar;
-    private IEnumerator? _astarEnumerator;
+    private IEnumerator<AStep>? _astarEnumerator;
     private bool _canStep = true;
 
     public Visualizer()
@@ -712,6 +712,14 @@ public sealed class Visualizer
         }
     }
 
+    private void Log(string line)
+    {
+        _log.Add(line);
+        while (_log.Count > MaxLogLines)
+            _log.RemoveAt(0);
+        _logText.DisplayedString = string.Join("\n", _log);
+    }
+
     private void HandleKeyPressed(object? sender, KeyEventArgs e)
     {
         if (e.Code == Keyboard.Key.N)
@@ -720,15 +728,40 @@ public sealed class Visualizer
             {
                 if (_astarEnumerator.MoveNext())
                 {
-                    _log.Add($"{_astarEnumerator.Current}");
-                    while (_log.Count > MaxLogLines)
-                        _log.RemoveAt(0);
-                    _logText.DisplayedString = string.Join("\n", _log);
-                    Debug.WriteLine(_astarEnumerator.Current);
-
-                    if ((string)_astarEnumerator.Current == "Found path to goal")
+                    switch (_astarEnumerator.Current)
                     {
-                        _canStep = false;
+                        case BeginSearch:
+                            Log("Beginning search");
+                            break;
+                        case VisitVertex visitVertex:
+                            Log($"Visiting {visitVertex.Vertex}");
+                            break;
+                        case ConsiderVertex considerVertex:
+                            Log($"Considering {considerVertex.To}, gScore = {considerVertex.GScore:N0}");
+                            break;
+                        case OpenVertex openVertex:
+                            Log($"Adding {openVertex.Vertex} to open set, fScore = {openVertex.FScore:N0}");
+                            break;
+                        case UpdateVertex updateVertex:
+                            Log($"Updating {updateVertex.Vertex}, fScore = {updateVertex.FScore:N0}");
+                            break;
+                        case DiscardPath discardPath:
+                            string message = discardPath.Reason switch
+                            {
+                                DiscardPathReason.DeadEnd => "Dead end, discarding path",
+                                DiscardPathReason.ShorterRouteFound => $"Shorter route to {discardPath.To} found, discarding previous path",
+                                DiscardPathReason.ShorterRouteExists => $"Shorter route to {discardPath.To} exists, discarding path",
+                                _ => throw new Exception("Unknown discard reason")
+                            };
+                            Log($"{message} {string.Join("->", discardPath.Path)}");
+                            break;
+                        case EndSearch endSearch:
+                            if (endSearch.Success)
+                                Log("Found path to goal");
+                            else
+                                Log("No solution found");
+                            _canStep = false;
+                            break;
                     }
                 }
                 else

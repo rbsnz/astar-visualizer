@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Data;
-using System.Diagnostics;
+﻿using System.Data;
 using System.Diagnostics.CodeAnalysis;
 
 using SFML.Graphics;
@@ -28,6 +26,8 @@ public sealed class Visualizer
     private readonly List<Vertex> _vertices = new();
     private readonly List<Edge> _edges = new();
     private readonly List<Edge> _potentialEdges = new();
+
+    private readonly List<OpenVertexCard> _openVertices = new();
 
     private readonly List<string> _log = new();
     private const int MaxLogLines = 10;
@@ -68,6 +68,8 @@ public sealed class Visualizer
         Radius = VertexRadius * 2,
         Origin = new Vector2f(VertexRadius * 2, VertexRadius * 2)
     };
+
+    private bool _showLog = true, _showOpenList = true;
 
     private Vertex? _hoverVertex;
     private bool _canPlace;
@@ -126,10 +128,18 @@ public sealed class Visualizer
 
     private void Update()
     {
+        Time deltaTime = _clock.Restart();
+        float delta = deltaTime.AsSeconds();
+
         _hoverCircle.FillColor =
             (_draggingVertex is not null)
             ? (_canPlace ? Theme.Current.VertexDragging : Theme.Current.VertexDraggingInvalid)
             : Theme.Current.VertexHover;
+
+        foreach (var card in _openVertices)
+        {
+            card.Position += (card.TargetPosition - card.Position) * delta * 5;
+        }
     }
 
     private void Draw()
@@ -182,7 +192,16 @@ public sealed class Visualizer
         // Screen space
         _window.SetView(_window.DefaultView);
 
-        _window.Draw(_logText);
+        if (_showOpenList)
+        {
+            foreach (var openVertex in _openVertices)
+                openVertex.Draw(_window);
+        }
+
+        if (_showLog)
+        {
+            _window.Draw(_logText);
+        }
 
         _window.Draw(_creditText);
 
@@ -211,6 +230,112 @@ public sealed class Visualizer
         _astar = null;
         _log.Clear();
         _logText.DisplayedString = string.Empty;
+        _openVertices.Clear();
+    }
+
+    /// <summary>
+    /// Sorts and updates the target positions of open vertex cards.
+    /// </summary>
+    private void UpdateOpenVertices()
+    {
+        _openVertices.Sort((a, b) => a.FScore.CompareTo(b.FScore));
+        for (int i = 0; i < _openVertices.Count; i++)
+            _openVertices[i].TargetPosition = new Vector2f(_openVertices[i].Position.X, 10 + (50 * i));
+    }
+
+    /// <summary>
+    /// Advances the A* algorithm by one step.
+    /// </summary>
+    private void Step()
+    {
+        if (_astar is null || !_canStep) return;
+
+        if (!_astar.Step())
+        {
+            _start = null;
+            _goal = null;
+            _log.Clear();
+            _logText.DisplayedString = string.Empty;
+
+            foreach (var vertex in _vertices)
+                vertex.State = AState.None;
+            foreach (var edge in _edges)
+                edge.State = AState.None;
+
+            _openVertices.Clear();
+
+            return;
+        }
+
+        switch (_astar.CurrentStep)
+        {
+            case BeginSearch:
+                {
+                    Log("Beginning search");
+                }
+                break;
+            case VisitVertex visitVertex:
+                {
+                    Log($"Visiting {visitVertex.Vertex}");
+                    var card = _openVertices.FirstOrDefault(x => x.Vertex == visitVertex.Vertex);
+                    if (card is not null)
+                    {
+                        _openVertices.Remove(card);
+                        UpdateOpenVertices();
+                    }
+                }
+                break;
+            case ConsiderVertex considerVertex:
+                {
+                    Log($"Considering {considerVertex.To}, gScore = {considerVertex.GScore:N0}");
+                }
+                break;
+            case OpenVertex openVertex:
+                {
+                    Log($"Adding {openVertex.Vertex} to open set, fScore = {openVertex.FScore:N0}");
+                    var card = new OpenVertexCard(openVertex.Vertex, openVertex.GScore, openVertex.FScore)
+                    {
+                        Size = new Vector2f(200, 40),
+                        Origin = new Vector2f(200, 0)
+                    };
+                    card.Position = card.TargetPosition = new Vector2f(_videoMode.Width - 10, 10 + (50 * _openVertices.Count));
+                    _openVertices.Add(card);
+                    UpdateOpenVertices();
+                }
+                break;
+            case UpdateVertex updateVertex:
+                {
+                    Log($"Updating {updateVertex.Vertex}, fScore = {updateVertex.FScore:N0}");
+                    var card = _openVertices.FirstOrDefault(x => x.Vertex == updateVertex.Vertex);
+                    if (card is not null)
+                    {
+                        card.GScore = updateVertex.GScore;
+                        card.FScore = updateVertex.FScore;
+                        UpdateOpenVertices();
+                    }
+                }
+                break;
+            case DiscardPath discardPath:
+                {
+                    string message = discardPath.Reason switch
+                    {
+                        DiscardPathReason.DeadEnd => "Dead end, discarding path",
+                        DiscardPathReason.ShorterRouteFound => $"Shorter route to {discardPath.To} found, discarding previous path",
+                        DiscardPathReason.ShorterRouteExists => $"Shorter route to {discardPath.To} exists, discarding path",
+                        _ => throw new Exception("Unknown discard reason")
+                    };
+                    Log($"{message} {string.Join("->", discardPath.Path)}");
+                }
+                break;
+            case EndSearch endSearch:
+                {
+                    _openVertices.Clear();
+                    _canStep = false;
+
+                    Log(endSearch.Success ? "Found path to goal" : "No solution found");
+                }
+                break;
+        }
     }
 
     /// <summary>
@@ -721,59 +846,7 @@ public sealed class Visualizer
     {
         if (e.Code == Keyboard.Key.N)
         {
-            if (_astar is not null && _canStep)
-            {
-                if (_astar.Step())
-                {
-                    switch (_astar.CurrentStep)
-                    {
-                        case BeginSearch:
-                            Log("Beginning search");
-                            break;
-                        case VisitVertex visitVertex:
-                            Log($"Visiting {visitVertex.Vertex}");
-                            break;
-                        case ConsiderVertex considerVertex:
-                            Log($"Considering {considerVertex.To}, gScore = {considerVertex.GScore:N0}");
-                            break;
-                        case OpenVertex openVertex:
-                            Log($"Adding {openVertex.Vertex} to open set, fScore = {openVertex.FScore:N0}");
-                            break;
-                        case UpdateVertex updateVertex:
-                            Log($"Updating {updateVertex.Vertex}, fScore = {updateVertex.FScore:N0}");
-                            break;
-                        case DiscardPath discardPath:
-                            string message = discardPath.Reason switch
-                            {
-                                DiscardPathReason.DeadEnd => "Dead end, discarding path",
-                                DiscardPathReason.ShorterRouteFound => $"Shorter route to {discardPath.To} found, discarding previous path",
-                                DiscardPathReason.ShorterRouteExists => $"Shorter route to {discardPath.To} exists, discarding path",
-                                _ => throw new Exception("Unknown discard reason")
-                            };
-                            Log($"{message} {string.Join("->", discardPath.Path)}");
-                            break;
-                        case EndSearch endSearch:
-                            if (endSearch.Success)
-                                Log("Found path to goal");
-                            else
-                                Log("No solution found");
-                            _canStep = false;
-                            break;
-                    }
-                }
-                else
-                {
-                    _start = null;
-                    _goal = null;
-                    _log.Clear();
-                    _logText.DisplayedString = string.Empty;
-
-                    foreach (var vertex in _vertices)
-                        vertex.State = AState.None;
-                    foreach (var edge in _edges)
-                        edge.State = AState.None;
-                }
-            }
+            Step();
         }
         else if (e.Code == Keyboard.Key.C)
         {
@@ -808,6 +881,14 @@ public sealed class Visualizer
                         _edges.Add(ee);
                 }
             }
+        }
+        else if (e.Code == Keyboard.Key.L)
+        {
+            _showLog = !_showLog;
+        }
+        else if (e.Code == Keyboard.Key.O)
+        {
+            _showOpenList = !_showOpenList;
         }
     }
 

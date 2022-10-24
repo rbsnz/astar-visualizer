@@ -71,11 +71,14 @@ public class AStar
         foreach (var edge in Edges)
             edge.State = AState.Unvisited;
 
+        yield return new BeginSearch();
+
         _gScores[Start] = 0;
         _fScores[Start] = Heuristic(Start, Goal);
         _openSet.Enqueue(Start, 0);
+        Start.State = AState.Potential;
 
-        yield return new BeginSearch();
+        yield return new OpenVertex(Start, 0, _fScores[Start]);
 
         while (_openSet.Count > 0)
         {
@@ -122,6 +125,7 @@ public class AStar
                 {
                     // If there was already a path to this vertex, we can eliminate the previous path.
                     // This is not part of the A* algorithm, it is purely for visual representation of discarded paths.
+                    bool previousPathExists = _cameFrom.ContainsKey(neighbor);
                     if (_cameFrom.ContainsKey(neighbor))
                     {
                         var eliminated = EliminatePath(neighbor);
@@ -139,7 +143,7 @@ public class AStar
 
                     _openSet.Enqueue(neighbor, fScoreNeighbor);
 
-                    if (_cameFrom.ContainsKey(neighbor))
+                    if (!previousPathExists)
                         yield return new OpenVertex(neighbor, gScoreNeighbor, fScoreNeighbor);
                     else
                         yield return new UpdateVertex(neighbor, gScoreNeighbor, fScoreNeighbor);

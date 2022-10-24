@@ -216,21 +216,78 @@ public sealed class Visualizer
     #endregion
 
     #region Logic
+
     /// <summary>
-    /// Resets the state of the visualizer and clears all vertices and edges.
+    /// Adds a line to the log.
     /// </summary>
-    private void Reset()
+    private void Log(string line)
+    {
+        _log.Add(line);
+        while (_log.Count > MaxLogLines)
+            _log.RemoveAt(0);
+        _logText.DisplayedString = string.Join("\n", _log);
+    }
+
+    /// <summary>
+    /// Clears all vertices and edges.
+    /// </summary>
+    private void Clear()
     {
         _vertices.Clear();
         _edges.Clear();
-        _start = null;
-        _goal = null;
         _hoverVertex = null;
         _hoverEdge = null;
+        Reset();
+    }
+
+    /// <summary>
+    /// Resets the algorithm state.
+    /// </summary>
+    private void Reset()
+    {
+        _start = _goal = null;
         _astar = null;
         _log.Clear();
         _logText.DisplayedString = string.Empty;
         _openVertices.Clear();
+        foreach (var vertex in _vertices)
+            vertex.State = AState.None;
+        foreach (var edge in _edges)
+            edge.State = AState.None;
+    }
+
+    /// <summary>
+    /// Generates a random graph.
+    /// </summary>
+    private void GenerateRandomGraph()
+    {
+        Clear();
+
+        float padding = VertexRadius * 8;
+
+        float left = _view.Center.X - (_view.Size.X / 2) + padding;
+        float top = _view.Center.Y - (_view.Size.Y / 2) + padding;
+        float width = _view.Size.X - padding * 2;
+        float height = _view.Size.Y - padding * 2;
+
+        int n = Random.Shared.Next(16, 33);
+        while (_vertices.Count < n)
+        {
+            PlaceVertex(new Vector2f(
+                left + (float)(Random.Shared.NextDouble() * width),
+                top + (float)(Random.Shared.NextDouble() * height)
+            ));
+        }
+
+        CalculatePotentialEdges();
+        foreach (var edge in _potentialEdges)
+        {
+            if (Random.Shared.NextDouble() < 0.05)
+            {
+                if (edge.A.Connect(edge.B, out Edge? ee))
+                    _edges.Add(ee);
+            }
+        }
     }
 
     /// <summary>
@@ -438,9 +495,9 @@ public sealed class Visualizer
     /// <param name="edges">The edges to search.</param>
     /// <param name="point">The point from which to find the nearest edge.</param>
     /// <param name="maxDistance">The maximum distance from the point t</param>
-    /// <param name="edge"></param>
-    /// <param name="intersection"></param>
-    /// <returns></returns>
+    /// <param name="edge">When the method returns, contains the nearest edge to the specified point, if one was found.</param>
+    /// <param name="intersection">When the method returns, contains the point along the nearest edge, if one was found.</param>
+    /// <returns>Whether an edge was found or not.</returns>
     private bool SnapPointToNearestEdge(IEnumerable<Edge> edges, Vector2f point, float maxDistance,
         [NotNullWhen(true)] out Edge? edge, out Vector2f intersection)
     {
@@ -834,61 +891,16 @@ public sealed class Visualizer
         }
     }
 
-    private void Log(string line)
-    {
-        _log.Add(line);
-        while (_log.Count > MaxLogLines)
-            _log.RemoveAt(0);
-        _logText.DisplayedString = string.Join("\n", _log);
-    }
-
     private void HandleKeyPressed(object? sender, KeyEventArgs e)
     {
-        if (e.Code == Keyboard.Key.N)
+        switch (e.Code)
         {
-            Step();
-        }
-        else if (e.Code == Keyboard.Key.C)
-        {
-            Reset();
-        }
-        else if (e.Code == Keyboard.Key.R)
-        {
-            Reset();
-
-            float padding = VertexRadius * 8;
-
-            float left = _view.Center.X - (_view.Size.X / 2) + padding;
-            float top = _view.Center.Y - (_view.Size.Y / 2) + padding;
-            float width = _view.Size.X - padding * 2;
-            float height = _view.Size.Y - padding * 2;
-
-            int n = Random.Shared.Next(16, 33);
-            while (_vertices.Count < n)
-            {
-                PlaceVertex(new Vector2f(
-                    left + (float)(Random.Shared.NextDouble() * width),
-                    top + (float)(Random.Shared.NextDouble() * height)
-                ));
-            }
-
-            CalculatePotentialEdges();
-            foreach (var edge in _potentialEdges)
-            {
-                if (Random.Shared.NextDouble() < 0.05)
-                {
-                    if (edge.A.Connect(edge.B, out Edge? ee))
-                        _edges.Add(ee);
-                }
-            }
-        }
-        else if (e.Code == Keyboard.Key.L)
-        {
-            _showLog = !_showLog;
-        }
-        else if (e.Code == Keyboard.Key.O)
-        {
-            _showOpenList = !_showOpenList;
+            case Keyboard.Key.C: Clear(); break;
+            case Keyboard.Key.X: Reset(); break;
+            case Keyboard.Key.R: GenerateRandomGraph(); break;
+            case Keyboard.Key.N: Step(); break;
+            case Keyboard.Key.L: _showLog = !_showLog; break;
+            case Keyboard.Key.O: _showOpenList = !_showOpenList; break;
         }
     }
 

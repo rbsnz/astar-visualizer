@@ -783,12 +783,15 @@ public sealed class Visualizer
         {
             Reset();
 
-            float left = _view.Center.X - (_view.Size.X / 2) + VertexRadius * 2;
-            float top = _view.Center.Y - (_view.Size.Y / 2) + VertexRadius * 2;
-            float width = _view.Size.X - VertexRadius * 4;
-            float height = _view.Size.Y - VertexRadius * 4;
+            float padding = VertexRadius * 8;
 
-            while (_vertices.Count < 52)
+            float left = _view.Center.X - (_view.Size.X / 2) + padding;
+            float top = _view.Center.Y - (_view.Size.Y / 2) + padding;
+            float width = _view.Size.X - padding * 2;
+            float height = _view.Size.Y - padding * 2;
+
+            int n = Random.Shared.Next(16, 33);
+            while (_vertices.Count < n)
             {
                 PlaceVertex(new Vector2f(
                     left + (float)(Random.Shared.NextDouble() * width),

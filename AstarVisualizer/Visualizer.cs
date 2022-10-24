@@ -35,7 +35,7 @@ public sealed class Visualizer
     private readonly Text _creditText = new()
     {
         Font = Theme.Current.Font,
-        CharacterSize = 16,
+        CharacterSize = 20,
         DisplayedString = "A* Visualizer by rob",
         FillColor = new Color(255, 255, 255, 100)
     };

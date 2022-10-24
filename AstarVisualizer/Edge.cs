@@ -1,5 +1,4 @@
 ﻿using SFML.Graphics;
-using SFML.System;
 
 namespace AstarVisualizer;
 
@@ -20,12 +19,12 @@ public class Edge
     /// <summary>
     /// Gets if this edge is connected to the specified vertex.
     /// </summary>
-    public bool IsIncidentTo(Vertex vertex) => vertex == A || vertex == B;
+    public bool IsIncidentTo(Vertex? vertex) => ReferenceEquals(vertex, A) || ReferenceEquals(vertex, B);
 
     /// <summary>
     /// Gets if this edge shares a common vertex with another edge.
     /// </summary>
-    public bool IsIncidentTo(Edge edge) => edge.IsIncidentTo(A) || edge.IsIncidentTo(B);
+    public bool IsIncidentTo(Edge? edge) => edge is not null && (edge.IsIncidentTo(A) || edge.IsIncidentTo(B));
 
     /// <summary>
     /// Gets a line that represents this edge.

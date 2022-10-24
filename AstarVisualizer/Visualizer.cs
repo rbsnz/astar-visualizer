@@ -69,10 +69,19 @@ public sealed class Visualizer
         Origin = new Vector2f(VertexRadius * 2, VertexRadius * 2)
     };
 
+    private readonly CircleShape _edgeSelectionCircle = new()
+    {
+        Radius = VertexRadius * 4,
+        Origin = new Vector2f(VertexRadius * 4, VertexRadius * 4),
+        FillColor = new Color(0, 255, 255, 100)
+    };
+
     private bool _showLog = true, _showOpenList = true;
 
     private Vertex? _hoverVertex;
     private bool _canPlace;
+
+    private Vertex? _edgeSelectionVertex = null;
 
     private bool _isPanning;
     private Vector2f _panOrigin;
@@ -166,7 +175,7 @@ public sealed class Visualizer
             foreach (var edge in _draggingVertex.Edges)
                 edge.Draw(_window);
 
-        if (_hoverEdge is not null)
+        if (_hoverEdge is not null && !_hoverEdge.IsPotentialEdge)
         {
             _window.Draw(new SFML.Graphics.Vertex[]
             {
@@ -178,6 +187,11 @@ public sealed class Visualizer
                 new(_edgeHoverPoint + new Vector2f(-5, 5)) { Color = Color.Red },
                 new(_edgeHoverPoint + new Vector2f(5, -5)) { Color = Color.Red },
             }, PrimitiveType.LineStrip);
+        }
+
+        if (_edgeSelectionVertex is not null)
+        {
+            _window.Draw(_edgeSelectionCircle);
         }
 
         foreach (var vertex in _vertices)
@@ -617,6 +631,9 @@ public sealed class Visualizer
             if (_hoverVertex is not null)
                 _hoverCircle.Position = _hoverVertex.Position;
         }
+
+        if (_astar is not null)
+            _hoverVertex = null;
     }
 
     private Vertex? PlaceVertex(Vector2f position)
@@ -708,7 +725,7 @@ public sealed class Visualizer
     /// </summary>
     private void BeginDrag(Vertex vertex, Vector2f pos)
     {
-        if (_astar is not null)
+        if (_astar is not null || _edgeSelectionVertex is not null)
             return;
 
         _draggingVertex = vertex;
@@ -773,6 +790,7 @@ public sealed class Visualizer
         Vector2i mousePos = new(e.X, e.Y);
         Vector2f pos = _window.MapPixelToCoords(mousePos, _view);
 
+        // Start panning if space is held when clicking
         if (e.Button == Mouse.Button.Left &&
             Keyboard.IsKeyPressed(Keyboard.Key.Space))
         {
@@ -780,6 +798,9 @@ public sealed class Visualizer
             return;
         }
 
+        if (_astar is not null) return;
+
+        // Select the start/goal vertices when right clicking
         if (e.Button == Mouse.Button.Right)
         {
             if (_hoverVertex is null || _isDragging) return;
@@ -809,8 +830,10 @@ public sealed class Visualizer
 
         if (e.Button == Mouse.Button.Left)
         {
+            // If an edge is being hovered over
             if (_hoverEdge is not null)
             {
+                // Attempt to create the edge if it is a potential edge
                 if (_hoverEdge.IsPotentialEdge)
                 {
                     if (_hoverEdge.A.Connect(_hoverEdge.B, out Edge? newEdge))
@@ -821,6 +844,7 @@ public sealed class Visualizer
                         return;
                     }
                 }
+                // Otherwise attempt to delete the existing edge
                 else
                 {
                     if (_hoverEdge.A.Disconnect(_hoverEdge.B, out _))
@@ -839,10 +863,12 @@ public sealed class Visualizer
                 }
             }
 
+            // Begin dragging if a vertex is being hovered over
             if (_hoverVertex is not null)
             {
                 BeginDrag(_hoverVertex, pos);
             }
+            // Otherwise attempt to place a vertex at the mouse position
             else if (_canPlace)
             {
                 PlaceVertex(pos);
@@ -880,11 +906,27 @@ public sealed class Visualizer
         }
         _hoverEdge = null;
 
+        _edgeSelectionVertex = null;
+
         if (Keyboard.IsKeyPressed(Keyboard.Key.LShift) && !_isDragging)
         {
-            if (SnapPointToNearestEdge(_edges, pos, 10.0f, out Edge? edge, out Vector2f intersection) ||
-                SnapPointToNearestEdge(_potentialEdges, pos, 30.0f, out edge, out intersection))
+            if (_hoverVertex is not null || _astar is not null) 
+                return;
+
+            Vertex? nearestVertex = _vertices.MinBy(x => Maths.Distance(x.Position, pos));
+            if (nearestVertex is not null &&
+                Maths.Distance(pos, nearestVertex.Position) <= (_edgeSelectionCircle.Radius + _edgeSelectionCircle.OutlineThickness))
             {
+                _edgeSelectionVertex = nearestVertex;
+                _edgeSelectionCircle.Position = _edgeSelectionVertex.Position;
+            }
+
+            if (SnapPointToNearestEdge(_edges, pos, 10.0f, out Edge? edge, out Vector2f intersection) ||
+                SnapPointToNearestEdge(_potentialEdges.Where(x => x.IsIncidentTo(_edgeSelectionVertex)), pos, 30.0f, out edge, out intersection))
+            {
+                if (!edge.IsPotentialEdge)
+                    _edgeSelectionVertex = null;
+
                 float distanceMouse = Maths.Distance(pos, intersection);
                 if (distanceMouse <= VertexRadius * 2)
                 {
@@ -892,8 +934,11 @@ public sealed class Visualizer
 
                     float distanceA = Maths.Distance(edge.A.Position, intersection);
                     float distanceB = Maths.Distance(edge.B.Position, intersection);
-                    if (distanceA > edge.A.Radius * 2 &&
-                        distanceB > edge.B.Radius * 2)
+                    bool selectEdge = true;
+                    if (!edge.IsPotentialEdge)
+                        selectEdge = distanceA > edge.A.Radius * 2 && distanceB > edge.B.Radius * 2;
+
+                    if (selectEdge)
                     {
                         _hoverEdge = edge;
                         if (_hoverEdge.IsPotentialEdge)
@@ -939,9 +984,18 @@ public sealed class Visualizer
 
     private void HandleKeyReleased(object? sender, KeyEventArgs e)
     {
-        if (e.Code == Keyboard.Key.N)
+        switch (e.Code)
         {
-            _canStep = true;
+            case Keyboard.Key.N: _canStep = true; break;
+            case Keyboard.Key.LShift:
+                _edgeSelectionVertex = null;
+                if (_hoverEdge is not null &&
+                    _hoverEdge.IsPotentialEdge)
+                {
+                    _hoverEdge.IsVisible = false;
+                }
+                _hoverEdge = null;
+                break;
         }
     }
 

@@ -15,6 +15,7 @@
   "VertexSuccess": "22b14c",
   "VertexOutlineOpen": "009999",
   "VertexOutlineClosed": "999900",
+  "EdgeStateInvalid": "c30000cc",
   "EdgeStateUnvisited": "c3c3c3",
   "EdgeStatePotential": "00a2e8",
   "EdgeStateInspecting": "a349a4",

@@ -3,7 +3,10 @@ using SFML.System;
 
 namespace AstarVisualizer;
 
-public class OpenVertexCard
+/// <summary>
+/// A visual card that displays a vertex label, gScore and fScore.
+/// </summary>
+public class OpenVertexCard : Drawable
 {
     private readonly RectangleShape _background;
     private readonly Text _textVertex, _textGscore, _textFscore;
@@ -126,11 +129,13 @@ public class OpenVertexCard
         _textFscore.Position = _position - _origin + new Vector2f(_size.X / 6 * 5, _size.Y / 2);
     }
 
-    public void Draw(RenderTarget target)
+    public void Draw(RenderTarget target) => Draw(target, RenderStates.Default);
+
+    public void Draw(RenderTarget target, RenderStates states)
     {
-        target.Draw(_background);
-        target.Draw(_textVertex);
-        target.Draw(_textGscore);
-        target.Draw(_textFscore);
+        target.Draw(_background, states);
+        target.Draw(_textVertex, states);
+        target.Draw(_textGscore, states);
+        target.Draw(_textFscore, states);
     }
 }
